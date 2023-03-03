@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Tuple
 
-from interpreter.ast import Expr, Binary, Unary, Literal, Grouping
+from interpreter.ast import Expr, Binary, Unary, Literal, Grouping, Variable
 from interpreter.token import Token, TokenType
 
 
@@ -20,16 +20,16 @@ class Parser:
             self.current += 1
         return self.peek(-1)
 
-    def check(self, token_type: TokenType) -> bool:
-        if self.at_end():
-            return False
-        return self.peek().token_type == token_type
+    def check(self, *types: TokenType, d: int = 0) -> bool:
+        for t in types:
+            if self.peek(d).token_type == t:
+                return True
+        return False
 
     def match(self, *types: TokenType) -> bool:
-        for t in types:
-            if self.check(t):
-                self.advance()
-                return True
+        if self.check(*types):
+            self.advance()
+            return True
         return False
 
     def error(self, token: Token, message: str) -> Exception:
@@ -42,6 +42,50 @@ class Parser:
         if self.check(token_type):
             return self.advance()
         raise self.error(self.peek(), message)
+
+    def parse(self) -> List[Expr]:
+        return self.program()
+
+    def program(self) -> List[Expr]:
+        statements = []
+        while not self.at_end():
+            statement = self.statement()
+            if statement is not None:
+                statements.append(statement)
+            else:
+                raise self.error(self.peek(), "Unexpected token.")
+        return statements
+
+    def statement(self) -> Expr:
+        statement = self.assignment()
+        if self.consume(TokenType.SEMICOLON, f"Semicolon expected"):
+            return statement
+
+    def identifier(self) -> Expr:
+        if self.check(TokenType.IDENTIFIER):
+            return Variable(self.advance())
+
+        if self.check(TokenType.PROPERTY):
+            prop = Variable(self.advance())
+            if self.check(TokenType.LEFT_PAREN):
+                open_paren = self.advance()
+                index = self.expression()
+                self.consume(TokenType.RIGHT_PAREN, "Expected right parenthesis")
+                return Binary(prop, open_paren, index)
+            else:
+                return prop
+
+        raise self.error(self.peek(), 'Identifier expected')
+
+    def assignment(self) -> Expr:
+        if self.check(TokenType.PROPERTY, TokenType.IDENTIFIER):
+            checkpoint = self.current
+            identifier = self.identifier()
+            if self.check(TokenType.EQUAL, TokenType.PLUS_EQUAL):
+                op = self.advance()
+                return Binary(identifier, op, self.expression())
+            self.current = checkpoint
+        return self.expression()
 
     def expression(self) -> Expr:
         return self.term()
@@ -70,8 +114,11 @@ class Parser:
         return self.primary()
 
     def primary(self) -> Expr:
-        if self.match(TokenType.NUMBER, TokenType.SYMBOL):
+        if self.match(TokenType.NUMBER):
             return Literal(self.peek(-1).literal)
+
+        if self.check(TokenType.IDENTIFIER, TokenType.PROPERTY):
+            return self.identifier()
 
         if self.match(TokenType.LEFT_PAREN):
             expr = self.expression()
@@ -79,6 +126,3 @@ class Parser:
             return Grouping(expr)
 
         self.error(self.peek(), 'Expected expression.')
-
-    def parse(self) -> Expr:
-        return self.expression()

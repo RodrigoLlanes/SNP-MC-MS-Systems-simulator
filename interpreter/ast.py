@@ -26,6 +26,10 @@ class Visitor(abc.ABC, Generic[T]):
     def visitUnaryExpr(self, expr: Unary) -> T:
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def visitVariableExpr(self, expr: Variable) -> T:
+        raise NotImplementedError()
+
 
 class Expr:
     def accept(self, visitor: Visitor[T]) -> T:
@@ -65,3 +69,11 @@ class Unary(Expr):
 
     def accept(self, visitor: Visitor[T]) -> T:
         return visitor.visitUnaryExpr(self)
+
+
+class Variable(Expr):
+    def __init__(self, variable: Token) -> None:
+        self.variable: Token = variable
+
+    def accept(self, visitor: Visitor[T]) -> T:
+        return visitor.visitVariableExpr(self)

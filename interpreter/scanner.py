@@ -12,8 +12,8 @@ class Scanner:
         self.tokens: List[Token] = []
 
         self.keywords: Dict[str, TokenType] = {
-            'def': TokenType.DEF,
-            'call': TokenType.CALL
+            #'def': TokenType.DEF,
+            #'call': TokenType.CALL
         }
 
     def at_end(self) -> bool:
@@ -56,11 +56,8 @@ class Scanner:
         string = self.get_string()
         if string in self.keywords:
             self.add_token(self.keywords[string], string)
-        elif self.last().token_type in (TokenType.CALL, TokenType.DEF):
-            self.add_token(TokenType.IDENTIFIER, string)
         else:
-            for s in string:
-                self.add_token(TokenType.SYMBOL, s, text=s)
+            self.add_token(TokenType.IDENTIFIER, string)
 
     def ignore_line(self) -> None:
         while not self.at_end():
@@ -110,6 +107,9 @@ class Scanner:
                     self.ignore_line()
                 else:
                     self.add_token(TokenType.DIV)
+            case '\'':
+                self.start += 1
+                self.add_token(TokenType.LABEL, self.get_string())
             case ' ' | '\r' | '\t':
                 pass
             case '\n':
