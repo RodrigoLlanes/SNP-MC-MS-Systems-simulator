@@ -9,33 +9,11 @@ class TestScanner(unittest.TestCase):
         Test
         """
         src = '''
-        def main()
-        {
-            @mu = [[[]'3 []'4]'2]'1;
-            @ms(3) = a,f;
+            a = 12
+            b = '12'; d = abz12s
+            c = 'a a a'
             
-            [a --> a,bp]'3;
-            [a --> bp,@d]'3;
-            [f --> f*2]'3;
-            
-            [bp --> b]'2;
-            [b []'4 --> b [c]'4]'2;
-            (1) [f*2 --> f ]'2;
-            (2) [f --> a,@d]'2;
-        }
-        '''
-        src = '''
-            @mu = [[[]'3 []'4]'2]'1;
-            @ms(3) = a,f;
-            
-            [a --> a,bp]'3;
-            [a --> bp,@d]'3;
-            [f --> f*2]'3;
-            
-            [bp --> b]'2;
-            [b []'4 --> b [c]'4]'2;
-            [f*2 --> f ]'2;
-            [f --> a,@d]'2;
+            [2] ('a' 'b'+)* / {'a', 'b'} -> {'a'} <1>, {'b'} <2>
         '''
         for token in Scanner(src).scan():
             print(token)

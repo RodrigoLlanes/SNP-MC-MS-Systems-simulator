@@ -13,7 +13,8 @@ class Scanner:
 
         self.keywords: Dict[str, TokenType] = {
             #'def': TokenType.DEF,
-            #'call': TokenType.CALL
+            'in': TokenType.IN,
+            'out': TokenType.OUT
         }
 
     def at_end(self) -> bool:
@@ -34,10 +35,21 @@ class Scanner:
         self.current += 1
         return True
 
-    def get_string(self) -> str:
+    def identifier(self) -> str:
+        start = self.current
         while not self.at_end() and (self.peek().isalnum() or self.peek() == '_'):
             self.advance()
-        return self.source[self.start: self.current]
+        if start == self.current:
+            raise Exception(f'Unexpected char "{self.peek()}" after "{self.peek(-1)}" on line {self.line}, expected a letter.')
+        return self.source[start: self.current]
+
+    def get_string(self, closing: str) -> str:
+        start = self.current
+        while not self.at_end() and (self.advance() != closing):
+            pass
+        if start == self.current:
+            raise Exception(f'Unexpected char "{self.peek()}" after "{self.peek(-1)}" on line {self.line}, expected a letter.')
+        return self.source[start: self.current-1]
 
     def add_token(self, token_type: TokenType, literal: object = None, text: str = None) -> None:
         if text is None:
@@ -52,13 +64,6 @@ class Scanner:
             self.advance()
         self.add_token(TokenType.NUMBER, int(self.source[self.start: self.current]))
 
-    def identifier(self) -> None:
-        string = self.get_string()
-        if string in self.keywords:
-            self.add_token(self.keywords[string], string)
-        else:
-            self.add_token(TokenType.IDENTIFIER, string)
-
     def ignore_line(self) -> None:
         while not self.at_end():
             if self.advance() == '\n':
@@ -69,62 +74,83 @@ class Scanner:
         c = self.advance()
         match c:
             case '(':
-                self.add_token(TokenType.LEFT_PAREN)
+                self.add_token(TokenType.OPEN_PAREN)
             case ')':
-                self.add_token(TokenType.RIGHT_PAREN)
-            case '[':
-                self.add_token(TokenType.LEFT_BRACE)
-            case ']':
-                self.add_token(TokenType.RIGHT_BRACE)
+                self.add_token(TokenType.CLOSE_PAREN)
             case '{':
-                self.add_token(TokenType.LEFT_BRACKET)
+                self.add_token(TokenType.OPEN_SET)
             case '}':
-                self.add_token(TokenType.RIGHT_BRACKET)
+                self.add_token(TokenType.CLOSE_SET)
+            case '[':
+                self.add_token(TokenType.OPEN_MEMBRANE)
+            case ']':
+                self.add_token(TokenType.CLOSE_MEMBRANE)
+            case '<':
+                self.add_token(TokenType.OPEN_CHANNEL)
+            case '>':
+                self.add_token(TokenType.CLOSE_CHANNEL)
             case ',':
                 self.add_token(TokenType.COMMA)
             case ';':
-                self.add_token(TokenType.SEMICOLON)
+                self.add_token(TokenType.END)
+            case '&':
+                if self.match('='):
+                    self.add_token(TokenType.INTERSECTION_EQUAL)
+                else:
+                    self.add_token(TokenType.INTERSECTION)
+            case '|':
+                if self.match('='):
+                    self.add_token(TokenType.UNION_EQUAL)
+                else:
+                    self.add_token(TokenType.UNION)
             case '%':
-                self.add_token(TokenType.MOD)
+                if self.match('='):
+                    self.add_token(TokenType.MOD_EQUAL)
+                else:
+                    self.add_token(TokenType.MOD)
             case '*':
-                self.add_token(TokenType.MULT)
-            case '=':
-                self.add_token(TokenType.EQUAL)
+                if self.match('='):
+                    self.add_token(TokenType.MULT_EQUAL)
+                else:
+                    self.add_token(TokenType.MULT)
+            case '/':
+                if self.match('='):
+                    self.add_token(TokenType.DIV_EQUAL)
+                else:
+                    self.add_token(TokenType.DIV)
             case '+':
                 if self.match('='):
                     self.add_token(TokenType.PLUS_EQUAL)
                 else:
                     self.add_token(TokenType.PLUS)
             case '-':
-                if self.peek() == '-' and self.peek(1) == '>':
-                    self.advance()
-                    self.advance()
+                if self.match('>'):
                     self.add_token(TokenType.THEN)
+                elif self.match('='):
+                    self.add_token(TokenType.MINUS_EQUAL)
                 else:
                     self.add_token(TokenType.MINUS)
-            case '/':
-                if self.match('/'):
-                    self.ignore_line()
-                else:
-                    self.add_token(TokenType.DIV)
-            case '\'':
-                self.start += 1
-                self.add_token(TokenType.LABEL, self.get_string())
+            case '=':
+                self.add_token(TokenType.EQUAL)
+            case '#':
+                self.ignore_line()
+            case '\'' | '"':
+                self.add_token(TokenType.SYMBOL, self.get_string(c))
             case ' ' | '\r' | '\t':
                 pass
             case '\n':
+                self.add_token(TokenType.END)
                 self.line += 1
             case _:
                 if c.isnumeric():
                     self.number()
                 elif c.isalpha():
-                    self.identifier()
-                elif c == '\'':
-                    self.start += 1
-                    self.add_token(TokenType.LABEL, self.get_string())
-                elif c == '@':
-                    self.start += 1
-                    self.add_token(TokenType.PROPERTY, self.get_string())
+                    self.current -= 1
+                    string = self.identifier()
+                    if string in self.keywords:
+                        self.add_token(self.keywords[string], string)
+                    else:
+                        self.add_token(TokenType.IDENTIFIER, string)
                 else:
                     raise Exception(f'Unknown char "{c}" on line {self.line}')
 
@@ -133,5 +159,5 @@ class Scanner:
             self.start = self.current
             self.next_token()
 
-        self.tokens.append(Token(TokenType.EOF, '', None, self.line))
+        self.tokens.append(Token(TokenType.EOF, 'EOF', None, self.line))
         return self.tokens

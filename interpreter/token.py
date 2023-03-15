@@ -2,33 +2,44 @@ from enum import auto, Enum
 
 
 class TokenType(Enum):
-    DEF = auto()
-    CALL = auto()
+    DEF = auto()    # FUTURE
+    RETURN = auto()    # FUTURE
+
+    IN = auto()
+    OUT = auto()
 
     IDENTIFIER = auto()
-    PROPERTY = auto()
     SYMBOL = auto()
     NUMBER = auto()
-    LABEL = auto()
 
-    LEFT_PAREN = auto()
-    RIGHT_PAREN = auto()
-    LEFT_BRACE = auto()
-    RIGHT_BRACE = auto()
-    LEFT_BRACKET = auto()
-    RIGHT_BRACKET = auto()
+    OPEN_PAREN = auto()
+    CLOSE_PAREN = auto()
+    OPEN_SET = auto()
+    CLOSE_SET = auto()
+    OPEN_MEMBRANE = auto()
+    CLOSE_MEMBRANE = auto()
+    OPEN_CHANNEL = auto()
+    CLOSE_CHANNEL = auto()
 
     MINUS = auto()
     PLUS = auto()
     MULT = auto()
     DIV = auto()
     MOD = auto()
+    UNION = auto()
+    INTERSECTION = auto()
     THEN = auto()
 
     EQUAL = auto()
     PLUS_EQUAL = auto()
+    MINUS_EQUAL = auto()
+    MULT_EQUAL = auto()
+    DIV_EQUAL = auto()
+    MOD_EQUAL = auto()
+    UNION_EQUAL = auto()
+    INTERSECTION_EQUAL = auto()
 
-    SEMICOLON = auto()
+    END = auto()
     COMMA = auto()
 
     EOF = auto()

@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from interpreter.ast import Expr, Binary, Unary, Literal, Grouping, Variable
+from interpreter.ast import Expr, Binary, Unary, Literal, Grouping, Variable, Struct, Function
 from interpreter.token import Token, TokenType
 
 
@@ -43,39 +43,31 @@ class Parser:
             return self.advance()
         raise self.error(self.peek(), message)
 
-    def parse(self) -> List[Expr]:
+    def parse(self) -> Function:
         return self.program()
 
-    def program(self) -> List[Expr]:
+    def consume_empty(self):
+        while self.match(TokenType.END):
+            pass
+
+    def program(self) -> Function:
         statements = []
         while not self.at_end():
+            self.consume_empty()
             statement = self.statement()
             if statement is not None:
                 statements.append(statement)
             else:
                 raise self.error(self.peek(), "Unexpected token.")
-        return statements
+        return Function(Token(TokenType.IDENTIFIER, 'main', None, 0), [], statements)
 
     def statement(self) -> Expr:
         statement = self.assignment()
-        if self.consume(TokenType.SEMICOLON, f"Semicolon expected"):
+        if self.consume(TokenType.END, f"Semicolon or end of line expected"):
             return statement
 
     def identifier(self) -> Expr:
-        if self.check(TokenType.IDENTIFIER):
-            return Variable(self.advance())
-
-        if self.check(TokenType.PROPERTY):
-            prop = Variable(self.advance())
-            if self.check(TokenType.LEFT_PAREN):
-                open_paren = self.advance()
-                index = self.expression()
-                self.consume(TokenType.RIGHT_PAREN, "Expected right parenthesis")
-                return Binary(prop, open_paren, index)
-            else:
-                return prop
-
-        raise self.error(self.peek(), 'Identifier expected')
+        return Variable(self.advance())
 
     def assignment(self) -> Expr:
         if self.check(TokenType.PROPERTY, TokenType.IDENTIFIER):
@@ -114,7 +106,7 @@ class Parser:
         return self.primary()
 
     def primary(self) -> Expr:
-        if self.match(TokenType.NUMBER):
+        if self.match(TokenType.NUMBER, TokenType.SYMBOL):
             return Literal(self.peek(-1).literal)
 
         if self.check(TokenType.IDENTIFIER, TokenType.PROPERTY):
@@ -124,5 +116,13 @@ class Parser:
             expr = self.expression()
             self.consume(TokenType.RIGHT_PAREN, 'Expected closing parenthesis.')
             return Grouping(expr)
+
+        if self.match(TokenType.LEFT_BRACKET):
+            content = []
+            while self.check(TokenType.LEFT_BRACKET):
+                content.append(self.expression())
+            self.consume(TokenType.RIGHT_BRACKET, 'Expected closing bracket.')
+            identifier = self.consume(TokenType.LABEL, 'Expected label.')
+            return Struct(identifier, content)
 
         self.error(self.peek(), 'Expected expression.')
