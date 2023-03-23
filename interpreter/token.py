@@ -1,9 +1,9 @@
-from enum import auto, Enum
+from enum import auto, Flag
 
 
-class TokenType(Enum):
-    DEF = auto()    # FUTURE
-    RETURN = auto()    # FUTURE
+class TokenType(Flag):
+    #DEF = auto()    # FUTURE
+    #RETURN = auto()    # FUTURE
 
     IN = auto()
     OUT = auto()
@@ -43,6 +43,8 @@ class TokenType(Enum):
     COMMA = auto()
 
     EOF = auto()
+
+    ASSIGNMENT = EQUAL | PLUS_EQUAL | MINUS_EQUAL | MULT_EQUAL | DIV_EQUAL | MOD_EQUAL | UNION_EQUAL | INTERSECTION_EQUAL
 
 
 class Token:

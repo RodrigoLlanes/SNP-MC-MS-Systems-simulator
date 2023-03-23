@@ -6,7 +6,6 @@ import abc
 from .token import Token
 from typing import List
 
-
 T = TypeVar('T')
 
 
@@ -89,8 +88,7 @@ class Variable(Expr):
 
 
 class Struct(Expr):
-    def __init__(self, identifier: Token, content: List[Expr]) -> None:
-        self.identifier: Token = identifier
+    def __init__(self, content: List[Expr]) -> None:
         self.content: List[Expr] = content
 
     def accept(self, visitor: Visitor[T]) -> T:

@@ -20,14 +20,13 @@ class Parser:
             self.current += 1
         return self.peek(-1)
 
-    def check(self, *types: TokenType, d: int = 0) -> bool:
-        for t in types:
-            if self.peek(d).token_type == t:
-                return True
+    def check(self, types: TokenType, d: int = 0) -> bool:
+        if self.peek(d).token_type in types:
+            return True
         return False
 
-    def match(self, *types: TokenType) -> bool:
-        if self.check(*types):
+    def match(self, types: TokenType) -> bool:
+        if self.check(types):
             self.advance()
             return True
         return False
@@ -46,45 +45,58 @@ class Parser:
     def parse(self) -> Function:
         return self.program()
 
-    def consume_empty(self):
-        while self.match(TokenType.END):
-            pass
-
     def program(self) -> Function:
         statements = []
         while not self.at_end():
-            self.consume_empty()
-            statement = self.statement()
-            if statement is not None:
-                statements.append(statement)
-            else:
-                raise self.error(self.peek(), "Unexpected token.")
+            statements.append(self.statement())
         return Function(Token(TokenType.IDENTIFIER, 'main', None, 0), [], statements)
 
     def statement(self) -> Expr:
         statement = self.assignment()
+
+        if statement is None:
+            raise self.error(self.peek(), "Unexpected token.")
         if self.consume(TokenType.END, f"Semicolon or end of line expected"):
             return statement
 
     def identifier(self) -> Expr:
-        return Variable(self.advance())
+        if self.check(TokenType.IDENTIFIER):
+            return Variable(self.advance())
+        if self.check(TokenType.OPEN_MEMBRANE):
+            identifier = Unary(self.advance(), self.expression())
+            self.consume(TokenType.CLOSE_MEMBRANE, 'Close membrane expected')
+            return identifier
+        if self.check(TokenType.OPEN_CHANNEL):
+            identifier = Unary(self.advance(), self.expression())
+            self.consume(TokenType.CLOSE_CHANNEL, 'Close chanel expected')
+            return identifier
+        self.error(self.peek(), 'Identifier expected')
 
     def assignment(self) -> Expr:
-        if self.check(TokenType.PROPERTY, TokenType.IDENTIFIER):
-            checkpoint = self.current
+        checkpoint = self.current
+
+        if self.check(TokenType.IDENTIFIER | TokenType.OPEN_MEMBRANE | TokenType.OPEN_CHANNEL):
             identifier = self.identifier()
-            if self.check(TokenType.EQUAL, TokenType.PLUS_EQUAL):
+            if self.check(TokenType.ASSIGNMENT):
                 op = self.advance()
                 return Binary(identifier, op, self.expression())
-            self.current = checkpoint
+        self.current = checkpoint
         return self.expression()
 
     def expression(self) -> Expr:
-        return self.term()
+        return self.logical()
+
+    def logical(self) -> Expr:
+        expr = self.term()
+        while self.match(TokenType.UNION | TokenType.INTERSECTION):
+            op = self.peek(-1)
+            right = self.term()
+            expr = Binary(expr, op, right)
+        return expr
 
     def term(self) -> Expr:
         expr = self.factor()
-        while self.match(TokenType.MINUS, TokenType.PLUS):
+        while self.match(TokenType.MINUS | TokenType.PLUS):
             op = self.peek(-1)
             right = self.factor()
             expr = Binary(expr, op, right)
@@ -92,7 +104,7 @@ class Parser:
 
     def factor(self) -> Expr:
         expr = self.unary()
-        while self.match(TokenType.DIV, TokenType.MULT, TokenType.MOD):
+        while self.match(TokenType.DIV | TokenType.MULT | TokenType.MOD):
             op = self.peek(-1)
             right = self.unary()
             expr = Binary(expr, op, right)
@@ -106,23 +118,26 @@ class Parser:
         return self.primary()
 
     def primary(self) -> Expr:
-        if self.match(TokenType.NUMBER, TokenType.SYMBOL):
+        if self.match(TokenType.NUMBER):
+            return Literal(int(self.peek(-1).literal))
+        if self.match(TokenType.SYMBOL):
             return Literal(self.peek(-1).literal)
 
-        if self.check(TokenType.IDENTIFIER, TokenType.PROPERTY):
-            return self.identifier()
+        if self.match(TokenType.OPEN_SET):
+            if self.match(TokenType.CLOSE_SET):
+                return Struct([])
+            struct = [self.expression()]
+            while self.match(TokenType.COMMA):
+                struct.append(self.expression())
+            self.consume(TokenType.CLOSE_SET, 'Expected closing set.')
+            return Struct(struct)
 
-        if self.match(TokenType.LEFT_PAREN):
+        if self.check(TokenType.IDENTIFIER):
+            return Variable(self.advance())
+
+        if self.match(TokenType.OPEN_PAREN):
             expr = self.expression()
-            self.consume(TokenType.RIGHT_PAREN, 'Expected closing parenthesis.')
+            self.consume(TokenType.CLOSE_PAREN, 'Expected closing parenthesis.')
             return Grouping(expr)
-
-        if self.match(TokenType.LEFT_BRACKET):
-            content = []
-            while self.check(TokenType.LEFT_BRACKET):
-                content.append(self.expression())
-            self.consume(TokenType.RIGHT_BRACKET, 'Expected closing bracket.')
-            identifier = self.consume(TokenType.LABEL, 'Expected label.')
-            return Struct(identifier, content)
 
         self.error(self.peek(), 'Expected expression.')

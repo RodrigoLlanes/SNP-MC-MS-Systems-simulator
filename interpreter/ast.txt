@@ -4,5 +4,5 @@ Grouping : Expr expression
 Literal  : object value
 Unary    : Token operator, Expr right
 Variable : Token variable
-Struct   : Token identifier, List[Expr] content
+Struct   : List[Expr] content
 Function : Token identifier, List[Variable] parameters, List[Expr] instructions

@@ -91,8 +91,6 @@ class Scanner:
                 self.add_token(TokenType.CLOSE_CHANNEL)
             case ',':
                 self.add_token(TokenType.COMMA)
-            case ';':
-                self.add_token(TokenType.END)
             case '&':
                 if self.match('='):
                     self.add_token(TokenType.INTERSECTION_EQUAL)
@@ -124,7 +122,9 @@ class Scanner:
                 else:
                     self.add_token(TokenType.PLUS)
             case '-':
-                if self.match('>'):
+                if self.peek() == '-' and self.peek(1) == '>':
+                    self.advance()
+                    self.advance()
                     self.add_token(TokenType.THEN)
                 elif self.match('='):
                     self.add_token(TokenType.MINUS_EQUAL)
@@ -138,9 +138,11 @@ class Scanner:
                 self.add_token(TokenType.SYMBOL, self.get_string(c))
             case ' ' | '\r' | '\t':
                 pass
-            case '\n':
-                self.add_token(TokenType.END)
-                self.line += 1
+            case '\n' | ';':
+                if len(self.tokens) > 0 and self.tokens[-1].token_type != TokenType.END:
+                    self.add_token(TokenType.END)
+                if c == '\n':
+                    self.line += 1
             case _:
                 if c.isnumeric():
                     self.number()

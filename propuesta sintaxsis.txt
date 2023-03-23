@@ -16,7 +16,7 @@ def main():
 
     # Multiconjuntos
     a = {'a', 'b', 'c'}
-    # Operadores (&/+) (union)    | (intersección)    - (diferencia)    *(se multiplica el contenido del multiconjunto por un entero >= 0)
+    # Operadores (|/+) (union)    & (intersección)    - (diferencia)    *(se multiplica el contenido del multiconjunto por un entero >= 0)
     {'a', 'b'} * 3 & ({'a', 'b'} - {'b', 'c'}) # = {a,a,a,a,b,b,b}
 
     # Membrana de entrada y de salida
