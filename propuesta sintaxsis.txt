@@ -47,7 +47,6 @@ del <1> [1] -> [2]
 del [1] regex / multiconjunto -> multiconjunto canal, ...
 
 # Blucles y condicionales
-
 while ...:
 
 for lower </<= i </<= upper:

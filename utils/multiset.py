@@ -16,13 +16,13 @@ class Multiset(MutableSet[T]):
         return str(self)
 
     def __str__(self) -> str:
-        return '(' + ', '.join(map(lambda x: ', '.join([str(x[0])] * x[1]), self.map.items())) + ')'
+        return '(' + ', '.join(map(lambda x: f'{x[0]} * {x[1]}', self.map.items())) + ')'
 
     def __len__(self) -> int:
         return sum(self.map.values())
 
     def __iter__(self) -> Iterator[T]:
-        for k, v in self.map:
+        for k, v in self.map.items():
             for _ in range(v):
                 yield k
 
@@ -42,6 +42,18 @@ class Multiset(MutableSet[T]):
             res.discard(item)
         return res
 
+    def __add__(self, other: Iterable[T]) -> Multiset[T]:
+        res = type(self)(self)
+        for item in other:
+            res.add(item)
+        return res
+
+    def __mul__(self, other: int) -> Multiset[T]:
+        res = Multiset()
+        for _ in range(other):
+            res.extend(self)
+        return res
+
     def add(self, value: T) -> None:
         self._add(value)
 
@@ -58,11 +70,15 @@ class Multiset(MutableSet[T]):
 
     def union(self, other: Iterable[T]) -> Multiset[T]:
         res = type(self)(self)
-        res.extend(other)
+        c = defaultdict(int)
+        for item in other:
+            c[item] += 1
+        for item, value in c.items():
+            res.map[item] = max(res.map[item], value)
         return res
 
     def intersection(self, other: Multiset[T]) -> Multiset[T]:
-        res = type(self)()
+        res = type(self)(self)
         for item, value in other.map.items():
             res.map[item] = min(res.map[item], value)
         return res

@@ -7,12 +7,15 @@ from interpreter.token import TokenType
 
 
 class Printer(Visitor[str]):
+    def visitBinaryExpr(self, expr: Binary) -> T:
+        return expr.left.accept(self) + ' ' + expr.operator.lexeme + ' ' + expr.right.accept(self)
+
     def visitFunctionExpr(self, expr: Function) -> T:
         return f'def {expr.identifier.lexeme} ({", ".join(p.accept(self) for p in expr.parameters)})' + '{\n    ' \
                + '\n    '.join(i.accept(self) for i in expr.instructions) + '\n}'
 
     def visitStructExpr(self, expr: Struct) -> T:
-        return f'[{" ".join(e.accept(self) for e in expr.content)}]{expr.identifier.lexeme}'
+        return f'[{" ".join(e.accept(self) for e in expr.content)}]'
 
     def visitVariableExpr(self, expr: Variable) -> T:
         return f'{expr.variable.lexeme}'
@@ -26,10 +29,6 @@ class Printer(Visitor[str]):
     def visitUnaryExpr(self, expr: Unary) -> T:
         return expr.operator.lexeme + ' ' + expr.right.accept(self)
 
-    def visitBinaryExpr(self, expr: Binary) -> T:
-        if expr.operator.token_type == TokenType.
-        return expr.left.accept(self) + ' ' + expr.operator.lexeme + ' ' + expr.right.accept(self)
-
 
 class TestParser(unittest.TestCase):
     def test(self):
@@ -37,10 +36,12 @@ class TestParser(unittest.TestCase):
         Test
         """
         src = """
-        @a(12+3) = 17;
-        1 + (a*2-1) % 5;
-        $z = @b(11);
-        [[]'2 [[]'4]'3]'1;
+            symb = 'a' + 1
+            [0] = {symb} * 100
+            
+            s1 = {'a', 'b'} * (3*5/2)
+            s2 = {'a'} & s1
+            s3 = {'a'} | s2
         """
         tokens = Scanner(src).scan()
         parsed = Parser(tokens).parse()
