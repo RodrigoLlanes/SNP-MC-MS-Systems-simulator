@@ -1,33 +1,57 @@
+
+# Un símbolo se puede expresar como un string python
+'acs'
+# Una membrana se puede expresar como un entero positivo entre corchetes
+#     Ese entero también puede ser una variable
+[1]
+# Un canal se puede expresar como un entero positivo entre menor y mayor
+#     Ese entero también puede ser una variable
+<1>
+# Regex
+('a'+)'b'*
+
+
+# Multiconjuntos
+a = {'a', 'b', 'c'}
+# Operadores (&/+) (union)    | (intersección)    - (diferencia)    *(se multiplica el contenido del multiconjunto por un entero >= 0)
+{'a', 'b'} * 3 & ({'a', 'b'} - {'b', 'c'}) # = {a,a,a,a,b,b,b}
+
+# Membrana de entrada y de salida
+in [1]
+out [2]
+
+# Canales
+<1> [1] -> [2]
+
+# Contenido de una membrana
+[1] = {'a'}
+
+# Producciones
+[1] regex / multiconjunto -> multiconjunto canal, ...
+
+
+
+
+#############################
+#    Futuras expansiones    #
+#############################
+
 # Posible ampliación con directivas al compilador
 #     Por ejemplo permitir caracteres sueltos como símbolos sin comillas (Por defecto viene deshabilitado por posibles interferencias con nombres de variables)
 
+# Funciones, main y auxiliares
 def main():
-    # Un símbolo se puede expresar como un string python
-    'acs'
-    # Una membrana se puede expresar como un entero positivo entre corchetes
-    #     Ese entero también puede ser una variable
-    [1]
-    # Un canal se puede expresar como un entero positivo entre menor y mayor
-    #     Ese entero también puede ser una variable
-    <1>
-    # Regex
-    ('a'+)'b'*
 
+# Eliminación de producciones y canales
+del <1> [1] -> [2]
+del [1] regex / multiconjunto -> multiconjunto canal, ...
 
-    # Multiconjuntos
-    a = {'a', 'b', 'c'}
-    # Operadores (&/+) (union)    | (intersección)    - (diferencia)    *(se multiplica el contenido del multiconjunto por un entero >= 0)
-    {'a', 'b'} * 3 & ({'a', 'b'} - {'b', 'c'}) # = {a,a,a,a,b,b,b}
+# Blucles y condicionales
 
-    # Membrana de entrada y de salida
-    in [1]
-    out [2]
+while ...:
 
-    # Canales
-    <1> [1] -> [2]
+for lower </<= i </<= upper:
 
-    # Contenido de una membrana
-    [1] = {'a'}
-
-    # Producciones
-    [1] regex / multiconjunto -> multiconjunto canal, ...
+if ...:
+elif ...:
+else ...:
