@@ -29,12 +29,9 @@ class Multiset(MutableSet[T]):
     def __contains__(self, x: T) -> bool:
         return x in self.map.keys()
 
-    def __deepcopy__(self, memo: dict) -> Multiset[T]:
-        new = type(self)()
-        memo[id(new)] = new
-        for v in self.map.values():
-            new._add(v)
-        return new
+    def __copy__(self):
+        result = type(self)(self)
+        return result
 
     def __sub__(self, other: Iterable[T]) -> Multiset[T]:
         res = type(self)(self)

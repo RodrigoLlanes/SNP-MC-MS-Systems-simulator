@@ -15,9 +15,11 @@ class TestInterpreter(unittest.TestCase):
             [0] = {symb} * 100
 
             s1 = {'a', 'b'} * (3*5/2)
-            s2 = {'a'} & s1
+            aux = s2 = {'a'} & s1
             s3 = {'a'} | s2
             s2 = s3 + s2
+            
+            [0] += s3
         """
         tokens = Scanner(src).scan()
         parsed = Parser(tokens).parse()

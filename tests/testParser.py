@@ -1,6 +1,6 @@
 import unittest
 
-from interpreter.ast import Visitor, Binary, T, Unary, Literal, Grouping, Variable, Struct, Function
+from interpreter.ast import Visitor, Binary, T, Unary, Literal, Grouping, Identifier, Struct, Function
 from interpreter.scanner import Scanner
 from interpreter.parser import Parser
 from interpreter.token import TokenType
@@ -17,8 +17,8 @@ class Printer(Visitor[str]):
     def visitStructExpr(self, expr: Struct) -> T:
         return f'[{" ".join(e.accept(self) for e in expr.content)}]'
 
-    def visitVariableExpr(self, expr: Variable) -> T:
-        return f'{expr.variable.lexeme}'
+    def visitVariableExpr(self, expr: Identifier) -> T:
+        return f'{expr.identifier.lexeme}'
 
     def visitGroupingExpr(self, expr: Grouping) -> T:
         return '(' + expr.expression.accept(self) + ')'

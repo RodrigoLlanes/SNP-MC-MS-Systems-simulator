@@ -27,7 +27,7 @@ class Visitor(abc.ABC, Generic[T]):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def visitVariableExpr(self, expr: Variable) -> T:
+    def visitVariableExpr(self, expr: Identifier) -> T:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -79,9 +79,9 @@ class Unary(Expr):
         return visitor.visitUnaryExpr(self)
 
 
-class Variable(Expr):
-    def __init__(self, variable: Token) -> None:
-        self.variable: Token = variable
+class Identifier(Expr):
+    def __init__(self, identifier: Token) -> None:
+        self.identifier: Token = identifier
 
     def accept(self, visitor: Visitor[T]) -> T:
         return visitor.visitVariableExpr(self)
@@ -96,9 +96,9 @@ class Struct(Expr):
 
 
 class Function(Expr):
-    def __init__(self, identifier: Token, parameters: List[Variable], instructions: List[Expr]) -> None:
+    def __init__(self, identifier: Token, parameters: List[Identifier], instructions: List[Expr]) -> None:
         self.identifier: Token = identifier
-        self.parameters: List[Variable] = parameters
+        self.parameters: List[Identifier] = parameters
         self.instructions: List[Expr] = instructions
 
     def accept(self, visitor: Visitor[T]) -> T:

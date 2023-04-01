@@ -3,66 +3,19 @@ from copy import copy
 from enum import Flag, auto
 from typing import Dict, List, Tuple, Optional
 
-from interpreter.ast import Visitor, Variable, T, Unary, Literal, Grouping, Binary, Struct, Function, Expr
+from interpreter.ast import Visitor, Identifier, T, Unary, Literal, Grouping, Binary, Struct, Function, Expr
+from interpreter.memorymanager import MemoryManager, DataType, Data, Value, Membrane, Variable
 from interpreter.token import Token, TokenType
 from utils import Multiset
 
 
-class Type(Flag):
-    INT = auto()
-    SYMBOL = auto()
-    MULTISET = auto()
-
-    REFERENCE = auto()
-
-    MEMBRANE = auto()
-    CHANNEL = auto()
-
-    NONE = auto()
-    ERROR = auto()
-
-
-class Value:
-    def __init__(self, value: object, t: Type, reference: Optional[str] = None):
-        self._value = value
-        self.t = t
-        self.reference = reference
-
-    @property
-    def value(self) -> object:
-        return self._value
-
-    @value.setter
-    def value(self, value: object) -> None:
-        self._value = value
-        self.reference = None
-
-
-class Interpreter(Visitor[Value]):
+class Interpreter(Visitor[Data]):
     def __init__(self, main: Function):
-        self.level = 0
+        self.mm = MemoryManager()
         self.main: Function = main
-        self._memory: Dict[str, Tuple[int, Value]] = {}
-        self.membranes: Dict[str, Multiset[str]] = defaultdict(Multiset[str])
 
     def print_state(self):
-        for ref, (l, v) in self._memory.items():
-            print(f'Var {ref} = {v.value} of type {v.t}')
-        for ref, s in self.membranes.items():
-            print(f'Membrane {ref} = {s.value}')
-
-    def get(self, ref: str) -> Value:
-        if ref in self._memory:
-            var = self._memory[ref][1]
-            return Value(copy(var.value), var.t, ref)
-        return Value(None, Type.NONE, ref)
-
-    def set(self, ref: str, val: Value) -> None:
-        val = Value(copy(val.value), val.t)
-        if ref not in self._memory:
-            self._memory[ref] = (self.level, val)
-        else:
-            self._memory[ref] = (self._memory[ref][0], val)
+        self.mm.print_state()
 
     def error(self, message: str) -> Exception:
         return Exception(f'Error: {message}')
@@ -70,99 +23,89 @@ class Interpreter(Visitor[Value]):
     def run(self, main: Function):
         main.accept(self)
 
-    def visitBinaryExpr(self, expr: Binary) -> Value:
+    def visitBinaryExpr(self, expr: Binary) -> Data:
         left = expr.left.accept(self)
         right = expr.right.accept(self)
         match expr.operator.token_type:
             case TokenType.EQUAL:
-                if left.reference is not None:
-                    self.set(left.reference, right)
-                elif right.t == Type.MULTISET:
-                    self.membranes[left.value] = right
-                else:
-                    self.error('Only multiset can be used as a membrane value')
-                return Value(None, Type.NONE)
+                left.value = right
+                return left
             case TokenType.UNION:
-                if left.t != Type.MULTISET or right.t != Type.MULTISET:
+                if left.type != DataType.MULTISET or right.type != DataType.MULTISET:
                     self.error('The union operator can only be used with multisets')
-                return Value(left.value.union(right.value), Type.MULTISET)
+                return Value(left.value.union(right.value), DataType.MULTISET)
             case TokenType.INTERSECTION:
-                if left.t != Type.MULTISET or right.t != Type.MULTISET:
+                if left.type != DataType.MULTISET or right.type != DataType.MULTISET:
                     self.error('The intersection operator can only be used with multisets')
-                return Value(left.value.intersection(right.value), Type.MULTISET)
+                return Value(left.value.intersection(right.value), DataType.MULTISET)
             case TokenType.PLUS:
-                if left.t == Type.MULTISET and right.t == Type.MULTISET:
-                    return Value(left.value + right.value, Type.MULTISET)
-                valid = Type.INT | Type.SYMBOL
-                if (left.t == Type.SYMBOL or right.t == Type.SYMBOL) and (left.t in valid and right.t in valid):
-                    return Value(str(left.value) + str(right.value), Type.SYMBOL)
-                if left.t == Type.INT and right.t == Type.INT:
-                    return Value(left.value + right.value, Type.INT)
-                self.error('The + operator is not defined for types ' + left.t + ' and ' + right.t)
+                if left.type == DataType.MULTISET and right.type == DataType.MULTISET:
+                    return Value(left.value + right.value, DataType.MULTISET)
+                valid = DataType.INT | DataType.SYMBOL
+                if (left.type == DataType.SYMBOL or right.type == DataType.SYMBOL) and (left.type in valid and right.type in valid):
+                    return Value(str(left.value) + str(right.value), DataType.SYMBOL)
+                if left.type == DataType.INT and right.type == DataType.INT:
+                    return Value(left.value + right.value, DataType.INT)
+                self.error('The + operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
             case TokenType.MINUS:
-                if left.t == Type.MULTISET and right.t == Type.MULTISET:
-                    return Value(left.value - right.value, Type.MULTISET)
-                if left.t == Type.INT and right.t == Type.INT:
-                    return Value(left.value - right.value, Type.INT)
-                self.error('The - operator is not defined for types ' + left.t + ' and ' + right.t)
+                if left.type == DataType.MULTISET and right.type == DataType.MULTISET:
+                    return Value(left.value - right.value, DataType.MULTISET)
+                if left.type == DataType.INT and right.type == DataType.INT:
+                    return Value(left.value - right.value, DataType.INT)
+                self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
             case TokenType.DIV:
-                if left.t == Type.INT and right.t == Type.INT:
-                    return Value(left.value // right.value, Type.INT)
-                self.error('The - operator is not defined for types ' + left.t + ' and ' + right.t)
+                if left.type == DataType.INT and right.type == DataType.INT:
+                    return Value(left.value // right.value, DataType.INT)
+                self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
             case TokenType.MOD:
-                if left.t == Type.INT and right.t == Type.INT:
-                    return Value(left.value % right.value, Type.INT)
-                self.error('The - operator is not defined for types ' + left.t + ' and ' + right.t)
+                if left.type == DataType.INT and right.type == DataType.INT:
+                    return Value(left.value % right.value, DataType.INT)
+                self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
             case TokenType.MULT:
-                if left.t == Type.MULTISET and right.t == Type.INT:
-                    return Value(left.value * right.value, Type.MULTISET)
-                if left.t == Type.SYMBOL and right.t == Type.INT:
-                    return Value(left.value * right.value, Type.SYMBOL)
-                if left.t == Type.INT and right.t == Type.INT:
-                    return Value(left.value * right.value, Type.INT)
-                self.error('The - operator is not defined for types ' + left.t + ' and ' + right.t)
+                if left.type == DataType.MULTISET and right.type == DataType.INT:
+                    return Value(left.value * right.value, DataType.MULTISET)
+                if left.type == DataType.SYMBOL and right.type == DataType.INT:
+                    return Value(left.value * right.value, DataType.SYMBOL)
+                if left.type == DataType.INT and right.type == DataType.INT:
+                    return Value(left.value * right.value, DataType.INT)
+                self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
 
-    def visitGroupingExpr(self, expr: Grouping) -> Value:
+    def visitGroupingExpr(self, expr: Grouping) -> Data:
         return expr.expression.accept(self)
 
-    def visitLiteralExpr(self, expr: Literal) -> Value:
+    def visitLiteralExpr(self, expr: Literal) -> Data:
         if isinstance(expr.value, str):
-            return Value(expr.value, Type.SYMBOL)
+            return Value(expr.value, DataType.SYMBOL)
         if isinstance(expr.value, int):
-            return Value(expr.value, Type.INT)
-        raise self.error('Unknown literal type of ' + str(expr.value))
+            return Value(expr.value, DataType.INT)
+        raise self.error('Unknown literal DataType of ' + str(expr.value))
 
-    def visitUnaryExpr(self, expr: Unary) -> Value:
+    def visitUnaryExpr(self, expr: Unary) -> Data:
         value = expr.right.accept(self)
 
         if expr.operator.token_type == TokenType.MINUS:
-            if value.t != Type.INT:
+            if value.type != DataType.INT:
                 raise self.error('Can not apply minus operator to a non int value')
-            return Value(-value.value, Type.INT)
+            return Value(-value.value, DataType.INT)
 
         if expr.operator.token_type == TokenType.OPEN_MEMBRANE:
-            if value.t != Type.INT:
+            if value.type != DataType.INT:
                 raise self.error('Can not get a membrane with a non int index')
-            return Value(value.value, Type.MEMBRANE)
+            return Membrane(self.mm, value.value)
 
-        if expr.operator.token_type == TokenType.OPEN_CHANNEL:
-            if value.t != Type.INT:
-                raise self.error('Can not get a channel with a non int index')
-            return Value(value.value, Type.CHANNEL)
+    def visitVariableExpr(self, expr: Identifier) -> Data:
+        return Variable(self.mm, expr.identifier.lexeme)
 
-    def visitVariableExpr(self, expr: Variable) -> Value:
-        return self.get(expr.variable.lexeme)
-
-    def visitStructExpr(self, expr: Struct) -> Value:
+    def visitStructExpr(self, expr: Struct) -> Data:
         m = Multiset()
         for v in expr.content:
             val = v.accept(self)
-            if val.t != Type.SYMBOL:
-                raise self.error('Expected multiset items to be symbol but ' + val.t + '  found')
+            if val.type != DataType.SYMBOL:
+                raise self.error('Expected multiset items to be symbol but ' + val.type + '  found')
             m.add(val.value)
-        return Value(m, Type.MULTISET)
+        return Value(m, DataType.MULTISET)
 
-    def visitFunctionExpr(self, expr: Function) -> Value:
+    def visitFunctionExpr(self, expr: Function) -> Data:
         from tests.testParser import Printer
         for instruction in expr.instructions:
             print("=============================================")
@@ -170,4 +113,4 @@ class Interpreter(Visitor[Value]):
             instruction.accept(self)
             print("")
             self.print_state()
-        return Value(None, Type.NONE)
+        return Value(None, DataType.INT)

@@ -1,7 +1,7 @@
 import sys
 from enum import Enum, auto
 
-from interpreter.ast import Visitor, Variable, T, Unary, Literal, Grouping, Binary, Struct
+from interpreter.ast import Visitor, Identifier, T, Unary, Literal, Grouping, Binary, Struct
 from interpreter.token import Token
 
 
@@ -58,5 +58,5 @@ class TypeChecker(Visitor[Type]):
     def visitUnaryExpr(self, expr: Unary) -> Type:
         pass
 
-    def visitVariableExpr(self, expr: Variable) -> Type:
+    def visitVariableExpr(self, expr: Identifier) -> Type:
         pass

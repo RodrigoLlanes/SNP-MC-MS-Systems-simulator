@@ -1,6 +1,6 @@
 from typing import List, Tuple
 
-from interpreter.ast import Expr, Binary, Unary, Literal, Grouping, Variable, Struct, Function
+from interpreter.ast import Expr, Binary, Unary, Literal, Grouping, Identifier, Struct, Function
 from interpreter.token import Token, TokenType
 
 
@@ -52,7 +52,7 @@ class Parser:
         return Function(Token(TokenType.IDENTIFIER, 'main', None, 0), [], statements)
 
     def statement(self) -> Expr:
-        statement = self.assignment()
+        statement = self.expression()
 
         if statement is None:
             raise self.error(self.peek(), "Unexpected token.")
@@ -61,7 +61,7 @@ class Parser:
 
     def identifier(self) -> Expr:
         if self.check(TokenType.IDENTIFIER):
-            return Variable(self.advance())
+            return Identifier(self.advance())
         if self.check(TokenType.OPEN_MEMBRANE):
             identifier = Unary(self.advance(), self.expression())
             self.consume(TokenType.CLOSE_MEMBRANE, 'Close membrane expected')
@@ -72,6 +72,9 @@ class Parser:
             return identifier
         self.error(self.peek(), 'Identifier expected')
 
+    def expression(self) -> Expr:
+        return self.assignment()
+
     def assignment(self) -> Expr:
         checkpoint = self.current
 
@@ -79,11 +82,8 @@ class Parser:
             identifier = self.identifier()
             if self.check(TokenType.ASSIGNMENT):
                 op = self.advance()
-                return Binary(identifier, op, self.expression())
+                return Binary(identifier, op, self.assignment())
         self.current = checkpoint
-        return self.expression()
-
-    def expression(self) -> Expr:
         return self.logical()
 
     def logical(self) -> Expr:
@@ -133,7 +133,7 @@ class Parser:
             return Struct(struct)
 
         if self.check(TokenType.IDENTIFIER):
-            return Variable(self.advance())
+            return Identifier(self.advance())
 
         if self.match(TokenType.OPEN_PAREN):
             expr = self.expression()
