@@ -23,45 +23,41 @@ class Interpreter(Visitor[Data]):
     def run(self, main: Function):
         main.accept(self)
 
-    def visitBinaryExpr(self, expr: Binary) -> Data:
-        left = expr.left.accept(self)
-        right = expr.right.accept(self)
-        match expr.operator.token_type:
-            case TokenType.EQUAL:
-                left.value = right
-                return left
-            case TokenType.UNION:
+    def calc(self, left: Data, op: TokenType, right: Data) -> Data:
+        match op:
+            case TokenType.UNION | TokenType.UNION_EQUAL:
                 if left.type != DataType.MULTISET or right.type != DataType.MULTISET:
                     self.error('The union operator can only be used with multisets')
                 return Value(left.value.union(right.value), DataType.MULTISET)
-            case TokenType.INTERSECTION:
+            case TokenType.INTERSECTION | TokenType.INTERSECTION_EQUAL:
                 if left.type != DataType.MULTISET or right.type != DataType.MULTISET:
                     self.error('The intersection operator can only be used with multisets')
                 return Value(left.value.intersection(right.value), DataType.MULTISET)
-            case TokenType.PLUS:
+            case TokenType.PLUS | TokenType.PLUS_EQUAL:
                 if left.type == DataType.MULTISET and right.type == DataType.MULTISET:
                     return Value(left.value + right.value, DataType.MULTISET)
                 valid = DataType.INT | DataType.SYMBOL
-                if (left.type == DataType.SYMBOL or right.type == DataType.SYMBOL) and (left.type in valid and right.type in valid):
+                if (left.type == DataType.SYMBOL or right.type == DataType.SYMBOL) and (
+                        left.type in valid and right.type in valid):
                     return Value(str(left.value) + str(right.value), DataType.SYMBOL)
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value + right.value, DataType.INT)
                 self.error('The + operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
-            case TokenType.MINUS:
+            case TokenType.MINUS | TokenType.MINUS_EQUAL:
                 if left.type == DataType.MULTISET and right.type == DataType.MULTISET:
                     return Value(left.value - right.value, DataType.MULTISET)
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value - right.value, DataType.INT)
                 self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
-            case TokenType.DIV:
+            case TokenType.DIV | TokenType.DIV_EQUAL:
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value // right.value, DataType.INT)
                 self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
-            case TokenType.MOD:
+            case TokenType.MOD | TokenType.MOD_EQUAL:
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value % right.value, DataType.INT)
                 self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
-            case TokenType.MULT:
+            case TokenType.MULT | TokenType.MULT_EQUAL:
                 if left.type == DataType.MULTISET and right.type == DataType.INT:
                     return Value(left.value * right.value, DataType.MULTISET)
                 if left.type == DataType.SYMBOL and right.type == DataType.INT:
@@ -69,6 +65,21 @@ class Interpreter(Visitor[Data]):
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value * right.value, DataType.INT)
                 self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
+
+    def visitBinaryExpr(self, expr: Binary) -> Data:
+        left = expr.left.accept(self)
+        right = expr.right.accept(self)
+        print(expr.operator.token_type)
+        match expr.operator.token_type:
+            case TokenType.EQUAL:
+                left.value = right
+                return left
+            case TokenType.EQUAL | TokenType.PLUS_EQUAL | TokenType.MINUS_EQUAL | TokenType.MULT_EQUAL | TokenType.DIV_EQUAL | TokenType.MOD_EQUAL | TokenType.UNION_EQUAL | TokenType.INTERSECTION_EQUAL:
+                print("Asignment")
+                left.value = self.calc(left, expr.operator.token_type, right)
+                return left
+            case _:
+                return self.calc(left, expr.operator.token_type, right)
 
     def visitGroupingExpr(self, expr: Grouping) -> Data:
         return expr.expression.accept(self)

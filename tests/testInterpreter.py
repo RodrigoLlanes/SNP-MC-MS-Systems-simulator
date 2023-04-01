@@ -14,9 +14,9 @@ class TestInterpreter(unittest.TestCase):
             symb = 'a' + 1
             [0] = {symb} * 100
 
-            s1 = {'a', 'b'} * (3*5/2)
-            aux = s2 = {'a'} & s1
-            s3 = {'a'} | s2
+            s1 = {'a1', 'b'} * (3*5/2)
+            aux = s2 = {'a1'} & s1
+            s3 = {symb} | s2
             s2 = s3 + s2
             
             [0] += s3
