@@ -1,37 +1,48 @@
-from collections import defaultdict
-from copy import copy
-from enum import Flag, auto
-from typing import Dict, List, Tuple, Optional
-
-from interpreter.ast import Visitor, Identifier, T, Unary, Literal, Grouping, Binary, Struct, Function, Expr
-from interpreter.memorymanager import MemoryManager, DataType, Data, Value, Membrane, Variable
-from interpreter.token import Token, TokenType
+from interpreter.ast import Visitor, Identifier, Unary, Literal, Grouping, Binary, Struct, Function, Call, Sinapsis
+from interpreter.interpreter.builtin import input_membrane, output_membrane
+from interpreter.interpreter.function import BuiltinFunction
+from interpreter.interpreter.memorymanager import MemoryManager, DataType, Data, Value, Membrane, Variable, none
+from interpreter.token import TokenType
+from interpreter.errormanager import error
 from utils import Multiset
 
 
 class Interpreter(Visitor[Data]):
+    @staticmethod
+    def interpreter_error(error_type: str, msg: str) -> None:
+        error('interpreter', error_type, msg)
+
+    @staticmethod
+    def type_error(msg: str) -> None:
+        Interpreter.interpreter_error('TypeError', msg)
+
+    @staticmethod
+    def unexpected_error(msg: str) -> None:
+        Interpreter.interpreter_error('UnexpectedError', msg)
+
     def __init__(self, main: Function):
         self.mm = MemoryManager()
         self.main: Function = main
 
+        # Register Builtin functions
+        self.mm.set_var('input', Value(BuiltinFunction(input_membrane), DataType.FUNCTION))
+        self.mm.set_var('output', Value(BuiltinFunction(output_membrane), DataType.FUNCTION))
+
     def print_state(self):
         self.mm.print_state()
 
-    def error(self, message: str) -> Exception:
-        return Exception(f'Error: {message}')
-
-    def run(self, main: Function):
-        main.accept(self)
+    def run(self):
+        self.main.accept(self)
 
     def calc(self, left: Data, op: TokenType, right: Data) -> Data:
         match op:
             case TokenType.UNION | TokenType.UNION_EQUAL:
                 if left.type != DataType.MULTISET or right.type != DataType.MULTISET:
-                    self.error('The union operator can only be used with multisets')
+                    self.type_error('The union operator can only be used with multisets')
                 return Value(left.value.union(right.value), DataType.MULTISET)
             case TokenType.INTERSECTION | TokenType.INTERSECTION_EQUAL:
                 if left.type != DataType.MULTISET or right.type != DataType.MULTISET:
-                    self.error('The intersection operator can only be used with multisets')
+                    self.type_error('The intersection operator can only be used with multisets')
                 return Value(left.value.intersection(right.value), DataType.MULTISET)
             case TokenType.PLUS | TokenType.PLUS_EQUAL:
                 if left.type == DataType.MULTISET and right.type == DataType.MULTISET:
@@ -42,21 +53,21 @@ class Interpreter(Visitor[Data]):
                     return Value(str(left.value) + str(right.value), DataType.SYMBOL)
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value + right.value, DataType.INT)
-                self.error('The + operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
+                self.type_error(f'The + operator is not defined for {left.type} and {right.type}')
             case TokenType.MINUS | TokenType.MINUS_EQUAL:
                 if left.type == DataType.MULTISET and right.type == DataType.MULTISET:
                     return Value(left.value - right.value, DataType.MULTISET)
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value - right.value, DataType.INT)
-                self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
+                self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
             case TokenType.DIV | TokenType.DIV_EQUAL:
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value // right.value, DataType.INT)
-                self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
+                self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
             case TokenType.MOD | TokenType.MOD_EQUAL:
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value % right.value, DataType.INT)
-                self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
+                self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
             case TokenType.MULT | TokenType.MULT_EQUAL:
                 if left.type == DataType.MULTISET and right.type == DataType.INT:
                     return Value(left.value * right.value, DataType.MULTISET)
@@ -64,18 +75,17 @@ class Interpreter(Visitor[Data]):
                     return Value(left.value * right.value, DataType.SYMBOL)
                 if left.type == DataType.INT and right.type == DataType.INT:
                     return Value(left.value * right.value, DataType.INT)
-                self.error('The - operator is not defined for DataTypes ' + left.type + ' and ' + right.type)
+                self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
+        self.unexpected_error('Unknown operand ' + op)
 
     def visitBinaryExpr(self, expr: Binary) -> Data:
         left = expr.left.accept(self)
         right = expr.right.accept(self)
-        print(expr.operator.token_type)
         match expr.operator.token_type:
             case TokenType.EQUAL:
                 left.value = right
                 return left
             case TokenType.EQUAL | TokenType.PLUS_EQUAL | TokenType.MINUS_EQUAL | TokenType.MULT_EQUAL | TokenType.DIV_EQUAL | TokenType.MOD_EQUAL | TokenType.UNION_EQUAL | TokenType.INTERSECTION_EQUAL:
-                print("Asignment")
                 left.value = self.calc(left, expr.operator.token_type, right)
                 return left
             case _:
@@ -89,22 +99,28 @@ class Interpreter(Visitor[Data]):
             return Value(expr.value, DataType.SYMBOL)
         if isinstance(expr.value, int):
             return Value(expr.value, DataType.INT)
-        raise self.error('Unknown literal DataType of ' + str(expr.value))
+        self.unexpected_error('Unknown literal DataType of ' + str(expr.value))
 
     def visitUnaryExpr(self, expr: Unary) -> Data:
         value = expr.right.accept(self)
 
         if expr.operator.token_type == TokenType.MINUS:
             if value.type != DataType.INT:
-                raise self.error('Can not apply minus operator to a non int value')
+                self.type_error('Can not apply minus operator to a non int value')
             return Value(-value.value, DataType.INT)
 
         if expr.operator.token_type == TokenType.OPEN_MEMBRANE:
             if value.type != DataType.INT:
-                raise self.error('Can not get a membrane with a non int index')
+                self.type_error('Can not get a membrane with a non int index')
             return Membrane(self.mm, value.value)
 
-    def visitVariableExpr(self, expr: Identifier) -> Data:
+        if expr.operator.token_type == TokenType.OPEN_CHANNEL:
+            if value.type != DataType.INT:
+                self.type_error('Can not get a channel with a non int index')
+            return Value(value.value, DataType.CHANNEL)
+        self.unexpected_error(f'Unknown unary operator {expr.operator.token_type}')
+
+    def visitIdentifierExpr(self, expr: Identifier) -> Data:
         return Variable(self.mm, expr.identifier.lexeme)
 
     def visitStructExpr(self, expr: Struct) -> Data:
@@ -112,7 +128,7 @@ class Interpreter(Visitor[Data]):
         for v in expr.content:
             val = v.accept(self)
             if val.type != DataType.SYMBOL:
-                raise self.error('Expected multiset items to be symbol but ' + val.type + '  found')
+                self.type_error(f'Expected multiset items to be symbol but {val.type} found')
             m.add(val.value)
         return Value(m, DataType.MULTISET)
 
@@ -125,3 +141,23 @@ class Interpreter(Visitor[Data]):
             print("")
             self.print_state()
         return Value(None, DataType.INT)
+
+    def visitCallExpr(self, expr: Call) -> Data:
+        f = expr.identifier.accept(self)
+        if f.type != DataType.FUNCTION:
+            self.type_error(f'Expected function but {f.type} found')
+        parameters = list(map(lambda x: x.accept(self), expr.params))
+        return f.value.call(*parameters)
+
+    def visitSinapsisExpr(self, expr: Sinapsis) -> Data:
+        left = expr.left.accept(self)
+        right = expr.right.accept(self)
+        channel = expr.channel.accept(self)
+        if not isinstance(left, Membrane):
+            self.type_error(f'Expected membrane as left production part but {left.type} found')
+        if not isinstance(right, Membrane):
+            self.type_error(f'Expected membrane as right production part but {right.type} found')
+        if channel.type != DataType.CHANNEL:
+            self.type_error(f'Expected channel as production label but {channel.type} found')
+        print(f'<{channel.value}> [{left.reference}] --> [{right.reference}]')
+        return none

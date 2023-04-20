@@ -4,7 +4,8 @@ from typing import Generic, TypeVar
 import abc
 
 from .token import Token
-from typing import List
+from typing import List, Tuple
+
 
 T = TypeVar('T')
 
@@ -27,7 +28,7 @@ class Visitor(abc.ABC, Generic[T]):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def visitVariableExpr(self, expr: Identifier) -> T:
+    def visitIdentifierExpr(self, expr: Identifier) -> T:
         raise NotImplementedError()
 
     @abc.abstractmethod
@@ -35,7 +36,23 @@ class Visitor(abc.ABC, Generic[T]):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def visitCallExpr(self, expr: Call) -> T:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def visitFunctionExpr(self, expr: Function) -> T:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def visitSinapsisExpr(self, expr: Sinapsis) -> T:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def visitRegexExpr(self, expr: Regex) -> T:
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def visitProductionExpr(self, expr: Production) -> T:
         raise NotImplementedError()
 
 
@@ -84,7 +101,7 @@ class Identifier(Expr):
         self.identifier: Token = identifier
 
     def accept(self, visitor: Visitor[T]) -> T:
-        return visitor.visitVariableExpr(self)
+        return visitor.visitIdentifierExpr(self)
 
 
 class Struct(Expr):
@@ -95,11 +112,49 @@ class Struct(Expr):
         return visitor.visitStructExpr(self)
 
 
+class Call(Expr):
+    def __init__(self, identifier: Identifier, params: List[Expr]) -> None:
+        self.identifier: Identifier = identifier
+        self.params: List[Expr] = params
+
+    def accept(self, visitor: Visitor[T]) -> T:
+        return visitor.visitCallExpr(self)
+
+
 class Function(Expr):
-    def __init__(self, identifier: Token, parameters: List[Identifier], instructions: List[Expr]) -> None:
+    def __init__(self, identifier: Token, parameters: List[Token], instructions: List[Expr]) -> None:
         self.identifier: Token = identifier
-        self.parameters: List[Identifier] = parameters
+        self.parameters: List[Token] = parameters
         self.instructions: List[Expr] = instructions
 
     def accept(self, visitor: Visitor[T]) -> T:
         return visitor.visitFunctionExpr(self)
+
+
+class Sinapsis(Expr):
+    def __init__(self, left: Expr, channel: Expr, right: Expr) -> None:
+        self.left: Expr = left
+        self.channel: Expr = channel
+        self.right: Expr = right
+
+    def accept(self, visitor: Visitor[T]) -> T:
+        return visitor.visitSinapsisExpr(self)
+
+
+class Regex(Expr):
+    def __init__(self, content: List[Expr]) -> None:
+        self.content: List[Expr] = content
+
+    def accept(self, visitor: Visitor[T]) -> T:
+        return visitor.visitRegexExpr(self)
+
+
+class Production(Expr):
+    def __init__(self, membrane: Expr, regex: Expr, consumed: Expr, channels: List[Tuple[Expr, Expr]]) -> None:
+        self.membrane: Expr = membrane
+        self.regex: Expr = regex
+        self.consumed: Expr = consumed
+        self.channels: List[Tuple[Expr, Expr]] = channels
+
+    def accept(self, visitor: Visitor[T]) -> T:
+        return visitor.visitProductionExpr(self)

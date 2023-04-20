@@ -1,6 +1,8 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from interpreter.ast import Expr, Binary, Unary, Literal, Grouping, Identifier, Struct, Function
+from interpreter.ast import Expr, Binary, Unary, Literal, Grouping, Identifier, Struct, Function, Call, Sinapsis, Regex, \
+    Production
+from interpreter.errormanager import error
 from interpreter.token import Token, TokenType
 
 
@@ -31,16 +33,16 @@ class Parser:
             return True
         return False
 
-    def error(self, token: Token, message: str) -> Exception:
+    def error(self, token: Token, message: str) -> None:
         if token.token_type == TokenType.EOF:
-            return Exception(f'Error at end of file (line {token.line}): {message}')
+            error('Parser', 'SyntaxError', f'{message} at end of file (line {token.line})')
         else:
-            return Exception(f'Error at "{token.lexeme}" (line {token.line}): {message}')
+            error('Parser', 'SyntaxError', f'{message} at "{token.lexeme}" (line {token.line})')
 
     def consume(self, token_type: TokenType, message: str) -> Token:
         if self.check(token_type):
             return self.advance()
-        raise self.error(self.peek(), message)
+        self.error(self.peek(), message)
 
     def parse(self) -> Function:
         return self.program()
@@ -52,25 +54,98 @@ class Parser:
         return Function(Token(TokenType.IDENTIFIER, 'main', None, 0), [], statements)
 
     def statement(self) -> Expr:
-        statement = self.expression()
+        # Non value expressions
+        if self.check(TokenType.OPEN_CHANNEL):
+            statement = self.sinapsis()
+        elif prod := self.production():
+            statement = prod
+        else:
+            statement = self.expression()
 
         if statement is None:
-            raise self.error(self.peek(), "Unexpected token.")
+            self.error(self.peek(), "Unexpected token.")
         if self.consume(TokenType.END, f"Semicolon or end of line expected"):
             return statement
 
+    def function_call(self) -> Call:
+        identifier = Identifier(self.advance())
+        self.advance()
+        if self.match(TokenType.CLOSE_PAREN):
+            return Call(identifier, [])
+        params = [self.expression()]
+        while self.match(TokenType.COMMA):
+            params.append(self.expression())
+        self.consume(TokenType.CLOSE_PAREN, 'Closing parenthesis expected.')
+        return Call(identifier, params)
+
     def identifier(self) -> Expr:
-        if self.check(TokenType.IDENTIFIER):
-            return Identifier(self.advance())
-        if self.check(TokenType.OPEN_MEMBRANE):
-            identifier = Unary(self.advance(), self.expression())
-            self.consume(TokenType.CLOSE_MEMBRANE, 'Close membrane expected')
-            return identifier
-        if self.check(TokenType.OPEN_CHANNEL):
-            identifier = Unary(self.advance(), self.expression())
-            self.consume(TokenType.CLOSE_CHANNEL, 'Close chanel expected')
-            return identifier
-        self.error(self.peek(), 'Identifier expected')
+        if self.check(TokenType.OPEN_PAREN, 1):
+            return self.function_call()
+        return Identifier(self.advance())
+
+    def membrane(self) -> Expr:
+        identifier = Unary(self.advance(), self.expression())
+        self.consume(TokenType.CLOSE_MEMBRANE, 'Close membrane expected')
+        return identifier
+
+    def channel(self) -> Expr:
+        identifier = Unary(self.advance(), self.expression())
+        self.consume(TokenType.CLOSE_CHANNEL, 'Close channel expected')
+        return identifier
+
+    def sinapsis(self) -> Expr:
+        channel = self.channel()
+        left = self.membrane()
+        self.consume(TokenType.THEN, 'Then expression ("-->") expected')
+        right = self.membrane()
+        return Sinapsis(left, channel, right)
+
+    def regex_group(self) -> Expr:
+        self.advance()
+        group = self.regex()
+        self.consume(TokenType.CLOSE_PAREN, 'Closing parenthesis expected')
+        return Grouping(group)
+
+    def regex_expr(self) -> Optional[Expr]:
+        expr = None
+        if self.check(TokenType.OPEN_PAREN):
+            expr = self.regex_group()
+        elif self.check(TokenType.SYMBOL):
+            expr = Literal(self.advance().literal)
+
+        if expr is not None and self.match(TokenType.MULT | TokenType.PLUS):
+            expr = Unary(self.peek(-1), expr)  # Habrá que ajustarlo en el interprete
+        return expr
+
+    def regex(self) -> Expr:
+        expressions = []
+        while expr := self.regex_expr():
+            expressions.append(expr)
+        return Regex(expressions)
+
+    def production(self) -> Optional[Expr]:
+        checkpoint = self.current
+        if not self.check(TokenType.OPEN_MEMBRANE):
+            return None
+        membrane = self.membrane()
+        regex = self.regex()
+        if not self.match(TokenType.DIV):
+            self.current = checkpoint
+            return None
+        consumed = self.expression()
+        if not self.match(TokenType.THEN):
+            self.error(self.peek(), 'Then expression ("-->") expected')
+
+        send = self.expression()
+        if not self.check(TokenType.OPEN_CHANNEL):
+            self.error(self.peek(), 'Channel expected')
+        tuples = [(send, self.channel())]
+        while self.match(TokenType.COMMA):
+            send = self.expression()
+            if not self.check(TokenType.OPEN_CHANNEL):
+                self.error(self.peek(), 'Channel expected')
+            tuples.append((send, self.channel()))
+        return Production(membrane, regex, consumed, tuples)
 
     def expression(self) -> Expr:
         return self.assignment()
@@ -78,8 +153,8 @@ class Parser:
     def assignment(self) -> Expr:
         checkpoint = self.current
 
-        if self.check(TokenType.IDENTIFIER | TokenType.OPEN_MEMBRANE | TokenType.OPEN_CHANNEL):
-            identifier = self.identifier()
+        if self.check(TokenType.IDENTIFIER | TokenType.OPEN_MEMBRANE):
+            identifier = self.identifier() if self.check(TokenType.IDENTIFIER) else self.membrane()
             if self.check(TokenType.ASSIGNMENT):
                 op = self.advance()
                 return Binary(identifier, op, self.assignment())
@@ -133,7 +208,9 @@ class Parser:
             return Struct(struct)
 
         if self.check(TokenType.IDENTIFIER):
-            return Identifier(self.advance())
+            return self.identifier()
+        if self.check(TokenType.OPEN_MEMBRANE):
+            return self.membrane()
 
         if self.match(TokenType.OPEN_PAREN):
             expr = self.expression()

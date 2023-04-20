@@ -1,5 +1,6 @@
 from typing import List, Dict
 
+from interpreter.errormanager import error
 from interpreter.token import Token, TokenType
 
 
@@ -16,6 +17,9 @@ class Scanner:
             'in': TokenType.IN,
             'out': TokenType.OUT
         }
+
+    def error(self, msg: str) -> None:
+        error('Scanner', 'SyntaxError', msg)
 
     def at_end(self) -> bool:
         return self.current >= len(self.source)
@@ -40,7 +44,7 @@ class Scanner:
         while not self.at_end() and (self.peek().isalnum() or self.peek() == '_'):
             self.advance()
         if start == self.current:
-            raise Exception(f'Unexpected char "{self.peek()}" after "{self.peek(-1)}" on line {self.line}, expected a letter.')
+            self.error(f'Unexpected char "{self.peek()}" after "{self.peek(-1)}" on line {self.line}.')
         return self.source[start: self.current]
 
     def get_string(self, closing: str) -> str:
@@ -48,7 +52,7 @@ class Scanner:
         while not self.at_end() and (self.advance() != closing):
             pass
         if start == self.current:
-            raise Exception(f'Unexpected char "{self.peek()}" after "{self.peek(-1)}" on line {self.line}, expected a letter.')
+            self.error(f'Unexpected char "{self.peek()}" after "{self.peek(-1)}" on line {self.line}, expected a letter.')
         return self.source[start: self.current-1]
 
     def add_token(self, token_type: TokenType, literal: object = None, text: str = None) -> None:
@@ -154,7 +158,7 @@ class Scanner:
                     else:
                         self.add_token(TokenType.IDENTIFIER, string)
                 else:
-                    raise Exception(f'Unknown char "{c}" on line {self.line}')
+                    self.error(f'Unknown char "{c}" on line {self.line}')
 
     def scan(self) -> List[Token]:
         while not self.at_end():

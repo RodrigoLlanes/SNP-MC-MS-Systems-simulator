@@ -1,8 +1,12 @@
 
-Binary   : Expr left, Token operator, Expr right
-Grouping : Expr expression
-Literal  : object value
-Unary    : Token operator, Expr right
+Binary     : Expr left, Token operator, Expr right
+Grouping   : Expr expression
+Literal    : object value
+Unary      : Token operator, Expr right
 Identifier : Token identifier
-Struct   : List[Expr] content
-Function : Token identifier, List[Variable] parameters, List[Expr] instructions
+Struct     : List[Expr] content
+Call       : Identifier identifier, List[Expr] params
+Function   : Token identifier, List[Token] parameters, List[Expr] instructions
+Sinapsis   : Expr left, Expr channel, Expr right
+Regex      : List[Expr] content
+Production : Expr membrane, Expr regex, Expr consumed, List[Tuple[Expr, Expr]] channels

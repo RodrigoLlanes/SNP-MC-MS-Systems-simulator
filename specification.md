@@ -1,10 +1,3 @@
-<<<<<<< HEAD
-<pre>
-program -> statement | statement
-statement_list -> <b>λ</b> | statement statement_list
-statement -> <b>END</b> | assignation <b>END</b> | assignation <b>END</b>
-</pre>
-=======
 ## Tipos de datos
 
 Disponemos del tipo entero para operaciones numéricas:
@@ -86,12 +79,12 @@ cualquier alternativa devolverá un error.
 
 ### Operaciones sobre multiconjuntos
 
-Sobre multiconjuntos tenemos definida la unión (``|`` o  ``+``), la intersección (``&``), la diferencia (``-``)
+Sobre multiconjuntos tenemos definida la unión (``|``), la concatenación (``+``), la intersección (``&``), la diferencia (``-``)
 y el producto (``*``);
 
 ```python
-{'a', 'b'} + {'b'}              # {'a', 'b', 'b'}
-{'a', 'b'} | {'b'}              # {'a', 'b', 'b'}
+{'a', 'b'} | {'b', 'b'}         # {'a', 'b', 'b'}
+{'a', 'b'} + {'b', 'b'}         # {'a', 'b', 'b', 'b'}
 {'a', 'b'} & {'a', 'a'}         # {'a'}
 {'a', 'a', 'b'} - {'a', 'c'}    # {'a', 'b'}
 {'a', 'b'} * 2                  # {'a', 'a', 'b', 'b'}
@@ -100,10 +93,10 @@ y el producto (``*``);
 
 ### Entrada y salida
 
-Para especificar las membranas de entrada y salida se utilizan los operadores ``in`` y ``out``.
+Para especificar las membranas de entrada y salida se utilizan los operadores ``input`` y ``output``.
 
-<pre><code><span style="color:#cc7836">in</span> [<span style="color:#6797bb">0</span>]
-<span style="color:#cc7836">out</span> [<span style="color:#6797bb">3</span>]
+<pre><code><span style="color:#cc7836">input</span>([<span style="color:#6797bb">0</span>])
+<span style="color:#cc7836">output</span>([<span style="color:#6797bb">3</span>])
 </code></pre>
 
 
@@ -159,8 +152,8 @@ será contar cuantos números del 1 al 100 son múltiplos de 3 y cuantos múltip
 siguiente modelo:
 
 ```python
-in [0]
-out[4]
+input([0])
+output([4])
 
 [0] = {'a'} * 100
 
@@ -187,4 +180,3 @@ los canales.
 
 Al acabar el programa, solo debemos contar el número de símbolos _fizz_ y el de _buzz_ para obtener el número
 de múltiplos de 3 y de 5 respectivamente.
->>>>>>> ec7b08444f8ae1c56c60cd8236fc51def86ee232

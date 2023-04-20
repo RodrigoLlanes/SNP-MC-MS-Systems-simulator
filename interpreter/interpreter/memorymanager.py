@@ -3,8 +3,9 @@ from __future__ import annotations
 from collections import defaultdict
 from copy import copy
 from enum import Flag, auto
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 from abc import ABC, abstractmethod
+from interpreter.errormanager import error
 
 from utils import Multiset
 
@@ -13,6 +14,9 @@ class DataType(Flag):
     INT = auto()
     SYMBOL = auto()
     MULTISET = auto()
+    FUNCTION = auto()
+    CHANNEL = auto()
+    NONE = auto()
     ERROR = auto()
 
 
@@ -27,6 +31,11 @@ class Data(ABC):
     def type(self) -> DataType:
         pass
 
+    @property
+    @abstractmethod
+    def reference(self) -> Optional[str]:
+        pass
+
 
 class Value(Data):
     def __init__(self, value: object, t: DataType):
@@ -39,11 +48,18 @@ class Value(Data):
 
     @value.setter
     def value(self, value: Data) -> None:
-        raise ValueError('Trying to set value of a non variable object')
+        error('MemoryManager', 'UnexpectedError', 'Trying to set value of a non variable object')
 
     @property
     def type(self) -> DataType:
         return self._type
+
+    @property
+    def reference(self) -> Optional[str]:
+        return None
+
+
+none = Value(None, DataType.NONE)
 
 
 class Variable(Data):
@@ -63,6 +79,10 @@ class Variable(Data):
     def type(self) -> DataType:
         return self._manager.get_var_type(self._reference)
 
+    @property
+    def reference(self) -> Optional[str]:
+        return self._reference
+
 
 class Membrane(Data):
     def __init__(self, manager: MemoryManager, reference: str):
@@ -80,6 +100,10 @@ class Membrane(Data):
     @property
     def type(self) -> DataType:
         return DataType.MULTISET
+
+    @property
+    def reference(self) -> Optional[str]:
+        return self._reference
 
 
 class MemoryManager:
@@ -101,7 +125,7 @@ class MemoryManager:
     def get_var(self, ref: str) -> object:
         if len(self._memory[ref]):
             return self._memory[ref][-1][2]
-        raise ValueError('Trying to access a not instantiated value')
+        error('MemoryManager', 'NameError', f'{ref} is not defined')
 
     def set_var(self, ref: str, val: Data) -> None:
         item = (self._level, val.type, copy(val.value) if val.type == DataType.MULTISET else val.value)
@@ -113,14 +137,14 @@ class MemoryManager:
         print(self._memory, ref)
         if len(self._memory[ref]):
             return self._memory[ref][-1][1]
-        raise ValueError('Trying to access a not instantiated value')
+        error('MemoryManager', 'NameError', f'{ref} is not defined')
 
     def get_mem(self, ref: str) -> Multiset:
         return self._membranes[ref]
 
     def set_mem(self, ref: str, val: Data) -> None:
         if val.type != DataType.MULTISET:
-            raise ValueError('Trying to set membrane value as a non multiset object')
+            error('MemoryManager', 'TypeError', f'Trying to set membrane value as a non multiset object')
         self._membranes[ref] = copy(val.value)
 
     def print_state(self):

@@ -19,8 +19,16 @@ class TestInterpreter(unittest.TestCase):
             s3 = {symb} | s2
             s2 = s3 + s2
             
-            [0] += s3
+            [0] += [1] + s2
+            
+            input([1])
+            
+            # Se cambia el tipo de symb
+            symb = 12
+            
+            <1+2> [symb+3] --> [0]
+            
         """
         tokens = Scanner(src).scan()
         parsed = Parser(tokens).parse()
-        print(parsed.accept(Interpreter(parsed)))
+        Interpreter(parsed).run()

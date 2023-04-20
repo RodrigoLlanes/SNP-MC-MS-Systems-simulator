@@ -1,3 +1,4 @@
+import re
 import argparse
 from typing import Tuple, List, Dict, TextIO
 
@@ -12,7 +13,8 @@ class ASTGenerator:
                 if len(line) == 0:
                     continue
                 class_name, fields = map(str.strip, line.split(':'))
-                fields = list(map(lambda field: field.strip().split(), fields.split(',')))
+                fields = list(map(lambda field: re.split(r'\s(?!(?:[^\s\[\]]+,)*[^\s\[\]]+])', field.strip(), 0),
+                                  re.split(r',(?!(?:[^,\[\]]+,)*[^,\[\]]+])', fields, 0)))
                 ast[class_name] = fields
         return ast
 
@@ -63,7 +65,7 @@ def main():
     args = parser.parse_args()
 
     generator = ASTGenerator(args.input, args.base)
-    generator.write(args.output, args.header)
+    generator.write(args.output, re.sub(r"\\n", "\n", args.header))
 
 
 if __name__ == '__main__':
