@@ -16,6 +16,7 @@ class DataType(Flag):
     MULTISET = auto()
     FUNCTION = auto()
     CHANNEL = auto()
+    REGEX = auto()
     NONE = auto()
     ERROR = auto()
 
@@ -134,7 +135,6 @@ class MemoryManager:
         self._memory[ref][-1] = item
 
     def get_var_type(self, ref: str) -> DataType:
-        print(self._memory, ref)
         if len(self._memory[ref]):
             return self._memory[ref][-1][1]
         error('MemoryManager', 'NameError', f'{ref} is not defined')

@@ -1,4 +1,5 @@
-from interpreter.ast import Visitor, Identifier, Unary, Literal, Grouping, Binary, Struct, Function, Call, Sinapsis
+from interpreter.ast import Visitor, Identifier, Unary, Literal, Grouping, Binary, Struct, Function, Call, Sinapsis, \
+    Production, T, Regex
 from interpreter.interpreter.builtin import input_membrane, output_membrane
 from interpreter.interpreter.function import BuiltinFunction
 from interpreter.interpreter.memorymanager import MemoryManager, DataType, Data, Value, Membrane, Variable, none
@@ -92,6 +93,9 @@ class Interpreter(Visitor[Data]):
                 return self.calc(left, expr.operator.token_type, right)
 
     def visitGroupingExpr(self, expr: Grouping) -> Data:
+        value = expr.expression.accept(self)
+        if value.type == DataType.REGEX:
+            return Value(['('] + value.value + [')'], DataType.REGEX)
         return expr.expression.accept(self)
 
     def visitLiteralExpr(self, expr: Literal) -> Data:
@@ -118,6 +122,21 @@ class Interpreter(Visitor[Data]):
             if value.type != DataType.INT:
                 self.type_error('Can not get a channel with a non int index')
             return Value(value.value, DataType.CHANNEL)
+
+        if expr.operator.token_type == TokenType.MULT:
+            if value.type == DataType.SYMBOL:
+                return Value([value.value, '*'], DataType.REGEX)
+            if value.type == DataType.REGEX:
+                return Value(value.value + ['*'], DataType.REGEX)
+            self.type_error('Can not use the star regex operator with non regex or symbol expression')
+
+        if expr.operator.token_type == TokenType.PLUS:
+            if value.type == DataType.SYMBOL:
+                return Value([value.value, '+'], DataType.REGEX)
+            if value.type == DataType.REGEX:
+                return Value(value.value + ['+'], DataType.REGEX)
+            self.type_error('Can not use the plus regex operator with non regex or symbol expression')
+
         self.unexpected_error(f'Unknown unary operator {expr.operator.token_type}')
 
     def visitIdentifierExpr(self, expr: Identifier) -> Data:
@@ -159,5 +178,27 @@ class Interpreter(Visitor[Data]):
             self.type_error(f'Expected membrane as right production part but {right.type} found')
         if channel.type != DataType.CHANNEL:
             self.type_error(f'Expected channel as production label but {channel.type} found')
-        print(f'<{channel.value}> [{left.reference}] --> [{right.reference}]')
+        print(f'New sinapsis added to channel {channel.value} from membrane {left.reference} to membrane {right.reference}')
+        return none
+
+    def visitRegexExpr(self, expr: Regex) -> Data:
+        regex = []
+        for val in map(lambda x: x.accept(self), expr.content):
+            if val.type == DataType.SYMBOL:
+                regex.append(val.value)
+            elif val.type == DataType.REGEX:
+                regex += val.value
+            else:
+                self.type_error(f'Expected regex or symbol but {val.type} found')
+        return Value(regex, DataType.REGEX)
+
+    def visitProductionExpr(self, expr: Production) -> Data:
+        membrane = expr.membrane.accept(self)
+        regex = expr.regex.accept(self)
+        consumed = expr.consumed.accept(self)
+        channels = [(send.accept(self), channel.accept(self)) for send, channel in expr.channels]
+
+        print(f'New production added to membrane {membrane.reference} if match {regex.value} consume {consumed.value}')
+        for send, channel in channels:
+            print(f'    Send {send.value} to channel {channel.value}')
         return none

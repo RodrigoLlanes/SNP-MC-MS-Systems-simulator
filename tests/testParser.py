@@ -4,6 +4,7 @@ from interpreter.ast import Visitor, Binary, Unary, Literal, Grouping, Identifie
     Production, T, Regex
 from interpreter.scanner import Scanner
 from interpreter.parser import Parser
+from interpreter.token import TokenType
 
 
 class Printer(Visitor[str]):
@@ -14,7 +15,7 @@ class Printer(Visitor[str]):
         return f'{expr.membrane.accept(self)} {expr.regex.accept(self)} / {expr.consumed.accept(self)} --> {", ".join(send.accept(self) + " " + channel.accept(self) for send, channel in expr.channels)}'
 
     def visitSinapsisExpr(self, expr: Sinapsis) -> str:
-        return expr.channel.accept(self) + ' ' + expr.left.accept(self) + ' -->' + expr.right.accept(self)
+        return expr.channel.accept(self) + ' ' + expr.left.accept(self) + ' --> ' + expr.right.accept(self)
 
     def visitCallExpr(self, expr: Call) -> str:
         return expr.identifier.accept(self) + '(' + ', '.join(map(lambda x: x.accept(self), expr.params)) + ')'
@@ -23,11 +24,11 @@ class Printer(Visitor[str]):
         return expr.left.accept(self) + ' ' + expr.operator.lexeme + ' ' + expr.right.accept(self)
 
     def visitFunctionExpr(self, expr: Function) -> str:
-        return f'def {expr.identifier.lexeme} ({", ".join(p.accept(self) for p in expr.parameters)})' + '{\n    ' \
-               + '\n    '.join(i.accept(self) for i in expr.instructions) + '\n}'
+        return f'def {expr.identifier.lexeme} ({", ".join(p.accept(self) for p in expr.parameters)})' + ':\n    ' \
+               + '\n    '.join(i.accept(self) for i in expr.instructions)
 
     def visitStructExpr(self, expr: Struct) -> str:
-        return f'[{" ".join(e.accept(self) for e in expr.content)}]'
+        return '{' + f'{", ".join(e.accept(self) for e in expr.content)}' + '}'
 
     def visitIdentifierExpr(self, expr: Identifier) -> str:
         return f'{expr.identifier.lexeme}'
@@ -39,6 +40,10 @@ class Printer(Visitor[str]):
         return str(expr.value)
 
     def visitUnaryExpr(self, expr: Unary) -> str:
+        if expr.operator.token_type == TokenType.OPEN_MEMBRANE:
+            return f'[{expr.right.accept(self)}]'
+        if expr.operator.token_type == TokenType.OPEN_CHANNEL:
+            return f'<{expr.right.accept(self)}>'
         return expr.operator.lexeme + ' ' + expr.right.accept(self)
 
 
