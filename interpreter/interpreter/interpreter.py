@@ -1,4 +1,5 @@
-from interpreter.ast import Visitor, Identifier, Unary, Literal, Grouping, Binary, Struct, Function, Call, Sinapsis
+from interpreter.ast import Visitor, Identifier, Unary, Literal, Grouping, Binary, Struct, Function, Call, Sinapsis, \
+    Production, T, Regex
 from interpreter.interpreter.builtin import input_membrane, output_membrane
 from interpreter.interpreter.function import BuiltinFunction
 from interpreter.interpreter.memorymanager import MemoryManager, DataType, Data, Value, Membrane, Variable, none
@@ -8,6 +9,12 @@ from utils import Multiset
 
 
 class Interpreter(Visitor[Data]):
+    def visitRegexExpr(self, expr: Regex) -> T:
+        pass
+
+    def visitProductionExpr(self, expr: Production) -> T:
+        pass
+
     @staticmethod
     def interpreter_error(error_type: str, msg: str) -> None:
         error('interpreter', error_type, msg)
