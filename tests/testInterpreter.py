@@ -27,7 +27,7 @@ class TestInterpreter(unittest.TestCase):
             symb = 12
             
             <1+2> [symb+3] --> [0]
-            
+            [0] ('a' 'a' 'b'*)+ / {'a', 'b'} --> {'a', 'a'} <0>, {'b'} <1>
         """
         tokens = Scanner(src).scan()
         parsed = Parser(tokens).parse()
