@@ -145,4 +145,4 @@ class SNPSystem(Generic[T, U]):
             if render_steps:
                 self.render(render_path, True, f'{render_name}.{step}')
         self._update_state()
-        return self._state[self.set_output]
+        return self._state[self._output]

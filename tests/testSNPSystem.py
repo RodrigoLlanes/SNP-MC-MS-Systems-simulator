@@ -15,6 +15,9 @@ class TestSNPSystem(unittest.TestCase):
         snp.add_channel(0, 1, 2)
         snp.add_rule(0, 'a+', Multiset(['a']), {0: Multiset(['a'])})
         snp.add_rule(1, '(aa)+', Multiset(['a']), {0: Multiset(['b','b'])})
+        snp.add_rule(1, 'a+', Multiset(['a', 'a']), {0: Multiset(['c'])})
         snp.add_symbols(0, *['a']*10)
 
-        snp.run([], render_steps=True)
+        result = snp.run(['a'], render_steps=True)
+
+        print(result)

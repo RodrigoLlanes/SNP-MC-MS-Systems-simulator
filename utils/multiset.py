@@ -52,7 +52,15 @@ class Multiset(MutableSet[T]):
         return res
 
     def dot(self) -> str:
-        return ''.join(map(lambda x: f'{x[0]}' if x[1] == 1 else str(x[0]) + '<SUP>' + str(x[1]) + '</SUP>', self.map.items()))
+        res = ''
+        for symbol, count in self.map.items():
+            if count == 0:
+                continue
+            elif count == 1:
+                res += str(symbol)
+            else:
+                res += f'{symbol}<SUP>{count}</SUP>'
+        return res
 
     def add(self, value: T) -> None:
         self._add(value)
