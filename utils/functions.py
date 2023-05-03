@@ -1,4 +1,5 @@
-def clossing_index(word: str) -> int:
+
+def closing_index(word: str) -> int:
     c = 1
     for i in range(1, len(word)):
         if word[i] == '(':

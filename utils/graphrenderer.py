@@ -16,7 +16,7 @@ class GraphRenderer:
     def add_edge(self, start: str, end: str, label=None):
         self.edges[start].append((end, label))
 
-    def render(self, path, name='SNP-System', comment=''):
+    def render(self, path, name, comment=''):
         dot = graphviz.Digraph(name, comment=comment)
         for node, label in self.nodes.items():
             label = re.sub('\n', '<BR/>', label)

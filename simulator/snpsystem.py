@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import random
 import re
+import typing
 from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Generic, Set
+from typing import Dict, List, TypeVar, Generic, Set, Optional
 from dataclasses import dataclass
-from utils.GraphRenderer import GraphRenderer
+from utils.graphrenderer import GraphRenderer
 
 from automatons import DFA
 from utils import Multiset
@@ -15,16 +16,22 @@ T = TypeVar('T')
 U = TypeVar('U')
 
 
-@dataclass
-class Rule(Generic[U]):
-    regex_str: str
-    regex: DFA
-    removed: Multiset[chr]
-    channels: Dict[U, Multiset[chr]]
+class Rule:
+    def __init__(self, regex: typing.Union[str, List[str]], removed: Multiset[str], channels: Dict[U, Multiset[str]]):
+        self.regex_str: str = regex
+        self.regex: DFA = DFA.from_RegEx(regex)
+        self.removed: Multiset[str] = removed
+        self.channels: Dict[str, Multiset[str]] = channels
 
     def __str__(self):
         return f'{self.regex_str} / {self.removed} --> ' + \
                ', '.join(f'{content} <{channel}>' for channel, content in self.channels.items())
+
+    def __repr__(self):
+        return str(self)
+
+    def valid(self, multiset: Multiset[str]) -> bool:
+        return self.regex.accepts_multiset(multiset)
 
     def dot(self):
         regex = re.sub(r'\+', '<SUP>+</SUP>', self.regex_str)
@@ -61,11 +68,12 @@ class SNPSystem(Generic[T, U]):
         self._state: Dict[T, Multiset[chr]] = {}
         self._next_state: Dict[T, Multiset[chr]] = {}
 
-    def render(self, path):
+    def render(self, path, current_state: bool = False, name: str = 'SNP-System', comment: str = ''):
         gr = GraphRenderer()
 
-        for node, content in self._ms.items():
+        for node in self._ms.keys():
             rules = '<BR/>'.join(map(lambda x: x.dot(), self._rules[node]))
+            content = self._ms[node] if not current_state else self._state[node]
             gr.add_node(str(node), f'<{content.dot()}<BR/>{rules}>')
 
         for channel, content in self._channels.items():
@@ -73,7 +81,7 @@ class SNPSystem(Generic[T, U]):
                 for end in ends:
                     gr.add_edge(str(start), str(end), f'{channel}')
 
-        gr.render(path)
+        gr.render(path, name, comment=comment)
 
     @register_membrane(0)
     def set_input(self, inp: T) -> None:
@@ -92,38 +100,49 @@ class SNPSystem(Generic[T, U]):
 
     @register_membrane(0)
     def add_rule(self, neuron: T, regex: str, removed: Multiset[chr], channels: Dict[U, Multiset[chr]]) -> None:
-        self._rules[neuron].append(Rule(regex, DFA.from_RegEx(regex), removed, channels))
+        self._rules[neuron].append(Rule(regex, removed, channels))
 
     def _update_state(self):
         self._state = deepcopy(self._next_state)
 
-    def _valid_rules(self) -> Dict[T, List[Rule]]:
-        return {
-            neuron: [rule
-                     for rule in rules
-                     if rule.regex.accepts_multiset(self._state[neuron])]
-            for neuron, rules in self._state.items()
-        }
+    def _valid_rules(self, neuron: T) -> List[Rule]:
+        return [rule for rule in self._rules[neuron] if rule.valid(self._state[neuron])]
+
+    def _aplicable_rules(self, neuron: T, rules: List[Rule]) -> List[Rule]:
+        return [rule for rule in rules if len(rule.removed - self._state[neuron]) == 0]
 
     def _run_rule(self, neuron: T, rule: Rule) -> bool:
-        if rule.removed not in self._state[neuron]:
-            return False
-
-        self._next_state[neuron].discard(rule.removed)
+        self._state[neuron] -= rule.removed
+        self._next_state[neuron] -= rule.removed
         for channel, sent in rule.channels.items():
-            for target in self._channels[channel]:
+            for target in self._channels[channel][neuron]:
                 self._next_state[target].extend(sent)
         return True
 
-    def run(self, input_data: Multiset[chr]) -> Multiset[chr]:
-        self._state = deepcopy(self._ms)
-        self._state[self._input].extend(input_data)
-        while valid_rules := self._valid_rules():  # Esto esta mal
-            for neuron, rules in valid_rules:  # Para cada neurona se crea una pool de reglas aplicables
-                random.shuffle(
-                    rules)  # Cada vez que se aplica una regla, se comprueba en un map que reglas dependían de alguno de esos símbolos
-                for rule in rules:  # Si ya no se puede aplicar, se elimina a si misma de la pool
-                    self._run_rule(neuron,
-                                   rule)  # Repetir hasta que la pool esté vacía, notese que lo que se envía se almacena en una pool de outputs, lo que se elimina si que se puede eliminar del estado
+    def _run_neuron(self, neuron: T) -> bool:
+        modified = False
+        valid_rules = self._valid_rules(neuron)
+        while valid_rules := self._aplicable_rules(neuron, valid_rules):
+            modified |= self._run_rule(neuron, random.choice(valid_rules))
+        return modified
+
+    def run(self, input_data: Multiset[str], render_steps: bool = False, render_name: str = 'SNP-System',
+            render_path: str = '../tmp') -> Multiset[str]:
+        self._next_state = deepcopy(self._ms)
+        self._next_state[self._input].extend(input_data)
+        self._update_state()
+        step = 0
+        if render_steps:
+            self.render(render_path, True, f'{render_name}.0')
+        while True:
+            step += 1
+            modified = False
+            for neuron in self._ms.keys():
+                modified |= self._run_neuron(neuron)
+            if not modified:
+                break
             self._update_state()
+            if render_steps:
+                self.render(render_path, True, f'{render_name}.{step}')
+        self._update_state()
         return self._state[self.set_output]

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import typing
 from copy import deepcopy
 from collections import defaultdict
-from typing import Union, Dict, Optional, Tuple, TypeVar, Set
+from typing import Union, Dict, Optional, Tuple, TypeVar, Set, Iterable, Iterator
 
 from automatons.node import Node, node_namer
-from utils import IdentitySet, clossing_index
+from utils import IdentitySet, closing_index
 
 epsilon = None
 RLGProductions = Optional[Union[Tuple[str, str], Tuple[str]]]
@@ -108,7 +109,7 @@ class EpsilonNFA:
         return cls.cast(cls._from_RegEx(regex))
 
     @staticmethod
-    def _from_RegEx(regex: str) -> EpsilonNFA:
+    def _from_RegEx(regex: typing.Union[str, typing.List[str]]) -> EpsilonNFA:
         if not len(regex):
             return EpsilonNFA(empty=False)
         elif len(regex) == 1:
@@ -118,7 +119,7 @@ class EpsilonNFA:
             res.final_states.add(final)
             return res
         elif regex[0] == '(':
-            i = clossing_index(regex)
+            i = closing_index(regex)
             left = EpsilonNFA.from_RegEx(regex[1:i])
             if regex[i + 1] == '*':
                 for final in left.final_states:
