@@ -51,6 +51,9 @@ class Multiset(MutableSet[T]):
             res.extend(self)
         return res
 
+    def dot(self) -> str:
+        return ''.join(map(lambda x: f'{x[0]}' if x[1] == 1 else str(x[0]) + '<SUP>' + str(x[1]) + '</SUP>', self.map.items()))
+
     def add(self, value: T) -> None:
         self._add(value)
 

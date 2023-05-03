@@ -13,4 +13,5 @@ class TestSNPSystem(unittest.TestCase):
         snp.set_output(1)
         snp.add_channel(0, 0, 1)
         snp.add_rule(0, 'a+', Multiset(['a']), {0: Multiset(['a'])})
-        snp.draw()
+        snp.add_symbols(0, *['a']*10)
+        snp.render('../tmp')

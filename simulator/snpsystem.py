@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import random
+import re
 from collections import defaultdict
 from copy import deepcopy
 from typing import Dict, List, TypeVar, Generic, Set
 from dataclasses import dataclass
-from graphviz import Digraph
-import numpy as np
-import matplotlib.pyplot as plt
+from utils.GraphRenderer import GraphRenderer
 
 from automatons import DFA
 from utils import Multiset
@@ -25,7 +24,13 @@ class Rule(Generic[U]):
 
     def __str__(self):
         return f'{self.regex_str} / {self.removed} --> ' + \
-            ', '.join(f'{content} <{channel}>' for channel, content in self.channels.items())
+               ', '.join(f'{content} <{channel}>' for channel, content in self.channels.items())
+
+    def dot(self):
+        regex = re.sub(r'\+', '<SUP>+</SUP>', self.regex_str)
+        regex = re.sub(r'\*', '<SUP>*</SUP>', regex)
+        return f'{regex} / {self.removed.dot()} → ' + \
+               ', '.join(f'{content.dot()} ({channel})' for channel, content in self.channels.items())
 
 
 def register_membrane(*indexes):
@@ -56,19 +61,19 @@ class SNPSystem(Generic[T, U]):
         self._state: Dict[T, Multiset[chr]] = {}
         self._next_state: Dict[T, Multiset[chr]] = {}
 
-    def draw(self):
-        dot = Digraph()
+    def render(self, path):
+        gr = GraphRenderer()
 
         for node, content in self._ms.items():
-            rules = '\n'.join(map(str, self._rules[node]))
-            dot.node(str(node), f'{node}\n{str(content)}\n' + rules)
+            rules = '<BR/>'.join(map(lambda x: x.dot(), self._rules[node]))
+            gr.add_node(str(node), f'<{content.dot()}<BR/>{rules}>')
 
         for channel, content in self._channels.items():
             for start, ends in content.items():
                 for end in ends:
-                    dot.edge(str(start), str(end), str(channel))
+                    gr.add_edge(str(start), str(end), f'{channel}')
 
-        dot.render(view=True)
+        gr.render(path)
 
     @register_membrane(0)
     def set_input(self, inp: T) -> None:

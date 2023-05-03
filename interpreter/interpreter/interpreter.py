@@ -9,12 +9,6 @@ from utils import Multiset
 
 
 class Interpreter(Visitor[Data]):
-    def visitRegexExpr(self, expr: Regex) -> T:
-        pass
-
-    def visitProductionExpr(self, expr: Production) -> T:
-        pass
-
     @staticmethod
     def interpreter_error(error_type: str, msg: str) -> None:
         error('interpreter', error_type, msg)
