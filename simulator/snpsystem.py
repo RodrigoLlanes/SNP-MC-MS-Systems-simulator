@@ -34,7 +34,10 @@ class Rule:
         return self.regex.accepts_multiset(multiset)
 
     def dot(self):
-        regex = re.sub(r'\+', '<SUP>+</SUP>', self.regex_str)
+        regex = self.regex_str
+        if isinstance(regex, list):
+            regex = ''.join(s if len(s) == 1 else f"'{s}'" for s in regex)
+        regex = re.sub(r'\+', '<SUP>+</SUP>', regex)
         regex = re.sub(r'\*', '<SUP>*</SUP>', regex)
         return f'{regex} / {self.removed.dot()} → ' + \
                ', '.join(f'{content.dot()} ({channel})' for channel, content in self.channels.items())

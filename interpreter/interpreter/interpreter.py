@@ -5,6 +5,7 @@ from interpreter.interpreter.function import BuiltinFunction
 from interpreter.interpreter.memorymanager import MemoryManager, DataType, Data, Value, Membrane, Variable, none
 from interpreter.token import TokenType
 from interpreter.errormanager import error
+from simulator.snpsystem import SNPSystem
 from utils import Multiset
 
 
@@ -26,14 +27,19 @@ class Interpreter(Visitor[Data]):
         self.main: Function = main
 
         # Register Builtin functions
-        self.mm.set_var('input', Value(BuiltinFunction(input_membrane), DataType.FUNCTION))
-        self.mm.set_var('output', Value(BuiltinFunction(output_membrane), DataType.FUNCTION))
+        self.mm.set_var('input', Value(BuiltinFunction(input_membrane(self)), DataType.FUNCTION))
+        self.mm.set_var('output', Value(BuiltinFunction(output_membrane(self)), DataType.FUNCTION))
+        self.model = SNPSystem()
 
     def print_state(self):
         self.mm.print_state()
 
-    def run(self):
+    def run(self) -> SNPSystem:
+        self.model = SNPSystem()
         self.main.accept(self)
+        for membrane, content in self.mm._membranes.items():
+            self.model.add_symbols(membrane, *list(content))
+        return self.model
 
     def calc(self, left: Data, op: TokenType, right: Data) -> Data:
         match op:
@@ -178,7 +184,8 @@ class Interpreter(Visitor[Data]):
             self.type_error(f'Expected membrane as right production part but {right.type} found')
         if channel.type != DataType.CHANNEL:
             self.type_error(f'Expected channel as production label but {channel.type} found')
-        print(f'New sinapsis added to channel {channel.value} from membrane {left.reference} to membrane {right.reference}')
+        self.model.add_channel(channel.value, left.reference, right.reference)
+        #print(f'New sinapsis added to channel {channel.value} from membrane {left.reference} to membrane {right.reference}')
         return none
 
     def visitRegexExpr(self, expr: Regex) -> Data:
@@ -198,7 +205,9 @@ class Interpreter(Visitor[Data]):
         consumed = expr.consumed.accept(self)
         channels = [(send.accept(self), channel.accept(self)) for send, channel in expr.channels]
 
-        print(f'New production added to membrane {membrane.reference} if match {regex.value} consume {consumed.value}')
-        for send, channel in channels:
-            print(f'    Send {send.value} to channel {channel.value}')
+        #print(f'New production added to membrane {membrane.reference} if match {regex.value} consume {consumed.value}')
+        #for send, channel in channels:
+        #    print(f'    Send {send.value} to channel {channel.value}')
+        print(regex.value)
+        self.model.add_rule(membrane.reference, regex.value, consumed.value, {channel.value: send.value for send, channel in channels})
         return none

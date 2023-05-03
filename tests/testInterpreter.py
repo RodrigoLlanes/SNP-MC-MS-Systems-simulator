@@ -28,7 +28,13 @@ class TestInterpreter(unittest.TestCase):
             
             <1+2> [symb+3] --> [0]
             [0] ('a' 'a' 'b'*)+ / {'a', 'b'} --> {'a', 'a'} <0>, {'b'} <1>
+            
+            [1] 'symbol'+'a'+ / {'symbol', 'a'} --> {'a'} <3>
+            <3> [1] --> [1]
+            
+            [1] = {'symbol', 'symbol', 'a'}
         """
         tokens = Scanner(src).scan()
         parsed = Parser(tokens).parse()
-        Interpreter(parsed).run()
+        model = Interpreter(parsed).run()
+        model.run([], True, render_path='../tmp')

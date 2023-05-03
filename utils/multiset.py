@@ -54,6 +54,8 @@ class Multiset(MutableSet[T]):
     def dot(self) -> str:
         res = ''
         for symbol, count in self.map.items():
+            if len(symbol) > 1:
+                symbol = f"'{symbol}'"
             if count == 0:
                 continue
             elif count == 1:
