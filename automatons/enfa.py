@@ -115,7 +115,7 @@ class EpsilonNFA:
         elif len(regex) == 1:
             res = EpsilonNFA()
             final = Node()
-            res.initial_state.add_transition(regex, final)
+            res.initial_state.add_transition(regex[0], final)
             res.final_states.add(final)
             return res
         elif regex[0] == '(':

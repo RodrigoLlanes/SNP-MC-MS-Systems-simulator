@@ -132,7 +132,8 @@ class SNPSystem(Generic[T, U]):
     def run(self, input_data: Multiset[str], render_steps: bool = False, render_name: str = 'SNP-System',
             render_path: str = '../tmp') -> Multiset[str]:
         self._next_state = deepcopy(self._ms)
-        self._next_state[self._input].extend(input_data)
+        if self._input is not None:
+            self._next_state[self._input].extend(input_data)
         self._update_state()
         step = 0
         if render_steps:
@@ -148,4 +149,7 @@ class SNPSystem(Generic[T, U]):
             if render_steps:
                 self.render(render_path, True, f'{render_name}.{step}')
         self._update_state()
-        return self._state[self._output]
+
+        if self._output is not None:
+            return self._state[self._output]
+        return Multiset()

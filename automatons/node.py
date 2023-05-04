@@ -15,6 +15,7 @@ class Node(Generic[T]):
         self._transitions: Dict[T, IdentitySet[Node]] = defaultdict(IdentitySet)
 
     def add_transition(self, term: T, dest: Node) -> None:
+
         self._transitions[term].add(dest)
 
     def transitions(self) -> Iterable[Tuple[T, Node]]:

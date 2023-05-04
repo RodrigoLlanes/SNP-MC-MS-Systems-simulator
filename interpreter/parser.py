@@ -64,7 +64,7 @@ class Parser:
 
         if statement is None:
             self.error(self.peek(), "Unexpected token.")
-        if self.consume(TokenType.END, f"Semicolon or end of line expected"):
+        if self.at_end() or self.consume(TokenType.END, f"Semicolon or end of line expected"):
             return statement
 
     def function_call(self) -> Call:
