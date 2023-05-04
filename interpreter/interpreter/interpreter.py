@@ -158,13 +158,13 @@ class Interpreter(Visitor[Data]):
         return Value(m, DataType.MULTISET)
 
     def visitFunctionExpr(self, expr: Function) -> Data:
-        from tests.testParser import Printer
+        #from tests.testParser import Printer
         for instruction in expr.instructions:
-            print("=============================================")
-            print(instruction.accept(Printer()))
+            #print("=============================================")
+            #print(instruction.accept(Printer()))
             instruction.accept(self)
-            print("")
-            self.print_state()
+            #print("")
+            #self.print_state()
         return Value(None, DataType.INT)
 
     def visitCallExpr(self, expr: Call) -> Data:
@@ -208,6 +208,5 @@ class Interpreter(Visitor[Data]):
         #print(f'New production added to membrane {membrane.reference} if match {regex.value} consume {consumed.value}')
         #for send, channel in channels:
         #    print(f'    Send {send.value} to channel {channel.value}')
-        print(regex.value)
         self.model.add_rule(membrane.reference, regex.value, consumed.value, {channel.value: send.value for send, channel in channels})
         return none
