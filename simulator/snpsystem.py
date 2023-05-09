@@ -72,19 +72,19 @@ class SNPSystem(Generic[T, U]):
         self._next_state: Dict[T, Multiset[chr]] = {}
 
     def render(self, path, current_state: bool = False, name: str = 'SNP-System', comment: str = ''):
-        gr = GraphRenderer()
+        gr = GraphRenderer(name, comment=comment)
 
         for node in self._ms.keys():
             rules = '<BR/>'.join(map(lambda x: x.dot(), self._rules[node]))
             content = self._ms[node] if not current_state else self._state[node]
-            gr.add_node(str(node), f'<{content.dot()}<BR/>{rules}>')
+            gr.add_node(str(node), f'<{content.dot()}<BR/>{rules}>', final=(node == self._output), initial=(node == self._input))
 
         for channel, content in self._channels.items():
             for start, ends in content.items():
                 for end in ends:
                     gr.add_edge(str(start), str(end), f'{channel}')
 
-        gr.render(path, name, comment=comment)
+        gr.render(path)
 
     @register_membrane(0)
     def set_input(self, inp: T) -> None:

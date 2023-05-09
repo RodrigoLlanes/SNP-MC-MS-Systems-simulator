@@ -1,32 +1,27 @@
 from collections import defaultdict
 import re
+from typing import Optional
+
 import graphviz
 
 
 class GraphRenderer:
-    def __init__(self):
-        self.nodes = {}
-        self.edges = defaultdict(list)
+    def __init__(self, name, comment=''):
+        self.graph = graphviz.Digraph(name, comment=comment)
 
-    def add_node(self, node: str, label=None):
-        if label is None:
-            label = str(node)
-        self.nodes[node] = label
-
-    def add_edge(self, start: str, end: str, label=None):
-        self.edges[start].append((end, label))
-
-    def render(self, path, name, comment=''):
-        dot = graphviz.Digraph(name, comment=comment)
-        for node, label in self.nodes.items():
+    def add_node(self, node: str, label=None, initial: bool = False, final: bool = False):
+        if label:
             label = re.sub('\n', '<BR/>', label)
-            dot.node(node, label)
-        for start, edges in self.edges.items():
-            for end, label in edges:
-                if label is None:
-                    dot.edge(start, end)
-                else:
-                    dot.edge(start, end, label=label)
+        shape = 'doublecircle' if final else None
+        self.graph.node(node, label, shape=shape)
 
+        if initial:
+            self.graph.node('', shape='none')
+            self.graph.edge('', node)
+
+    def add_edge(self, start: str, end: str, label: Optional[str] = None):
+        self.graph.edge(start, end, label=label)
+
+    def render(self, path):
         # print(dot.source)
-        print(dot.render(directory=path).replace('\\', '/'))
+        print(self.graph.render(directory=path).replace('\\', '/'))
