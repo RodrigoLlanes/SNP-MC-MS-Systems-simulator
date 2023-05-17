@@ -14,6 +14,7 @@ class DataType(Flag):
     INT = auto()
     SYMBOL = auto()
     MULTISET = auto()
+    MEMBRANE = auto()
     FUNCTION = auto()
     CHANNEL = auto()
     REGEX = auto()

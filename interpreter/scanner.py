@@ -14,8 +14,8 @@ class Scanner:
 
         self.keywords: Dict[str, TokenType] = {
             #'def': TokenType.DEF,
-            'in': TokenType.IN,
-            'out': TokenType.OUT
+            #'in': TokenType.IN,
+            #'out': TokenType.OUT
         }
 
     def error(self, msg: str) -> None:
