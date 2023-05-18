@@ -13,14 +13,14 @@ class GraphRenderer:
         if label:
             label = re.sub('\n', '<BR/>', label)
         shape = 'doublecircle' if final else None
-        self.graph.node(node, label, shape=shape)
+        self.graph.node(node, label, xlabel=node, shape=shape)
 
         if initial:
             self.graph.node('', shape='none')
             self.graph.edge('', node)
 
     def add_edge(self, start: str, end: str, label: Optional[str] = None):
-        self.graph.edge(start, end, label=label)
+        self.graph.edge(start, end, label=f'({label})')
 
     def render(self, path):
         # print(dot.source)
