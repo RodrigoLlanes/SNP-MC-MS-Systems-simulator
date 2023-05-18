@@ -12,8 +12,8 @@ class GraphRenderer:
     def add_node(self, node: str, label=None, initial: bool = False, final: bool = False):
         if label:
             label = re.sub('\n', '<BR/>', label)
-        shape = 'doublecircle' if final else None
-        self.graph.node(node, label, xlabel=node, shape=shape)
+        shape = 'none' if final else None
+        self.graph.node(node, label, xlabel=node if not final else None, shape=shape)
 
         if initial:
             self.graph.node('', shape='none')

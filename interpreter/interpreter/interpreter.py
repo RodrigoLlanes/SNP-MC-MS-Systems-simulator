@@ -187,6 +187,10 @@ class Interpreter(Visitor[Data]):
             self.type_error(f'Expected membrane as right production part but {right.type} found')
         if channel.type != DataType.CHANNEL:
             self.type_error(f'Expected channel as production label but {channel.type} found')
+
+        if right.reference == left.reference:
+            self.interpreter_error('CircularSinapsisError', 'Circular sinapsis can not exist')
+
         self.model.add_channel(channel.value, left.reference, right.reference)
         #print(f'New sinapsis added to channel {channel.value} from membrane {left.reference} to membrane {right.reference}')
         return none
