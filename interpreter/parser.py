@@ -97,7 +97,10 @@ class Parser:
         channel = self.channel()
         left = self.membrane()
         self.consume(TokenType.THEN, 'Then expression ("-->") expected')
-        right = self.membrane()
+        if self.check(TokenType.OPEN_MEMBRANE):
+            right = self.membrane()
+        else:
+            right = self.identifier()
         return Sinapsis(left, channel, right)
 
     def regex_group(self) -> Expr:

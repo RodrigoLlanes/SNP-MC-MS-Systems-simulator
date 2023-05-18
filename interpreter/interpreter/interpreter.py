@@ -28,7 +28,7 @@ class Interpreter(Visitor[Data]):
 
         # Register Builtin functions
         self.mm.set_var('input', Value(BuiltinFunction(input_membrane(self)), DataType.FUNCTION))
-        self.mm.set_var('output', Value(BuiltinFunction(output_membrane(self)), DataType.FUNCTION))
+        self.mm.set_var('out', Value(Membrane(self.mm, 'out'), DataType.MEMBRANE))
         self.model = SNPSystem()
 
     def print_state(self):
@@ -36,6 +36,7 @@ class Interpreter(Visitor[Data]):
 
     def run(self) -> SNPSystem:
         self.model = SNPSystem()
+        self.model.set_output('out')
         self.main.accept(self)
         for membrane, content in self.mm._membranes.items():
             self.model.add_symbols(membrane, *list(content))
@@ -180,10 +181,16 @@ class Interpreter(Visitor[Data]):
         channel = expr.channel.accept(self)
         if not isinstance(left, Membrane):
             self.type_error(f'Expected membrane as left production part but {left.type} found')
+        if isinstance(right, Variable) and right.type == DataType.MEMBRANE:
+            right = right.value
         if not isinstance(right, Membrane):
             self.type_error(f'Expected membrane as right production part but {right.type} found')
         if channel.type != DataType.CHANNEL:
             self.type_error(f'Expected channel as production label but {channel.type} found')
+
+        if right.reference == left.reference:
+            self.interpreter_error('CircularSinapsisError', 'Circular sinapsis can not exist')
+
         self.model.add_channel(channel.value, left.reference, right.reference)
         #print(f'New sinapsis added to channel {channel.value} from membrane {left.reference} to membrane {right.reference}')
         return none
