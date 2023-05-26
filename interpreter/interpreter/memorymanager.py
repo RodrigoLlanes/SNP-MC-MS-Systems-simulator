@@ -49,7 +49,7 @@ class Value(Data):
         return self._value
 
     @value.setter
-    def value(self, value: Data) -> None:
+    def value(self, _: Data) -> None:
         error('MemoryManager', 'UnexpectedError', 'Trying to set value of a non variable object')
 
     @property
@@ -101,7 +101,7 @@ class Membrane(Data):
 
     @property
     def type(self) -> DataType:
-        return DataType.MULTISET
+        return DataType.MEMBRANE | DataType.MULTISET
 
     @property
     def reference(self) -> Optional[str]:
@@ -111,8 +111,13 @@ class Membrane(Data):
 class MemoryManager:
     def __init__(self):
         self._level = 0
+        self._reserved = set()
         self._memory: Dict[str, List[Tuple[int, DataType, object]]] = defaultdict(list)
         self._membranes: Dict[str, Multiset[str]] = defaultdict(Multiset[str])
+
+    def add_reserved(self, ref: str, val: Data):
+        self._memory[ref].append((0, val.type, val.value))
+        self._reserved.add(ref)
 
     def level_up(self):
         self._level += 1
@@ -130,7 +135,14 @@ class MemoryManager:
         error('MemoryManager', 'NameError', f'{ref} is not defined')
 
     def set_var(self, ref: str, val: Data) -> None:
-        item = (self._level, val.type, copy(val.value) if val.type == DataType.MULTISET else val.value)
+        if ref in self._reserved:
+            error('MemoryManager', 'NameError', f'Can not set {ref} reserved word.')
+
+        if DataType.MULTISET in val.type:
+            value = copy(val.value)
+        else:
+            value = val.value
+        item = (self._level, val.type, value)
         if len(self._memory[ref]) == 0 or self._memory[ref][-1][0] < self._level:
             self._memory[ref].append(item)
         self._memory[ref][-1] = item
@@ -144,7 +156,7 @@ class MemoryManager:
         return self._membranes[ref]
 
     def set_mem(self, ref: str, val: Data) -> None:
-        if val.type != DataType.MULTISET:
+        if DataType.MULTISET not in val.type:
             error('MemoryManager', 'TypeError', f'Trying to set membrane value as a non multiset object')
         self._membranes[ref] = copy(val.value)
 

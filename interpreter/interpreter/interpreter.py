@@ -1,11 +1,12 @@
 from interpreter.ast import Visitor, Identifier, Unary, Literal, Grouping, Binary, Struct, Function, Call, Sinapsis, \
     Production, T, Regex
-from interpreter.interpreter.builtin import input_membrane, output_membrane
+from interpreter.interpreter.builtin import input_membrane
 from interpreter.interpreter.function import BuiltinFunction
 from interpreter.interpreter.memorymanager import MemoryManager, DataType, Data, Value, Membrane, Variable, none
 from interpreter.token import TokenType
 from interpreter.errormanager import error
 from simulator.snpsystem import SNPSystem
+from tests.testParser import Printer
 from utils import Multiset
 
 
@@ -27,8 +28,8 @@ class Interpreter(Visitor[Data]):
         self.main: Function = main
 
         # Register Builtin functions
-        self.mm.set_var('input', Value(BuiltinFunction(input_membrane(self)), DataType.FUNCTION))
-        self.mm.set_var('out', Value(Membrane(self.mm, 'out'), DataType.MEMBRANE))
+        self.mm.add_reserved('input', Value(BuiltinFunction(input_membrane(self)), DataType.FUNCTION))
+        self.mm.add_reserved('out', Membrane(self.mm, 'out'))
         self.model = SNPSystem()
 
     def print_state(self):
@@ -45,43 +46,42 @@ class Interpreter(Visitor[Data]):
     def calc(self, left: Data, op: TokenType, right: Data) -> Data:
         match op:
             case TokenType.UNION | TokenType.UNION_EQUAL:
-                if left.type != DataType.MULTISET or right.type != DataType.MULTISET:
+                if DataType.MULTISET not in left.type or DataType.MULTISET not in right.type:
                     self.type_error('The union operator can only be used with multisets')
                 return Value(left.value.union(right.value), DataType.MULTISET)
             case TokenType.INTERSECTION | TokenType.INTERSECTION_EQUAL:
-                if left.type != DataType.MULTISET or right.type != DataType.MULTISET:
+                if DataType.MULTISET not in left.type or DataType.MULTISET not in right.type:
                     self.type_error('The intersection operator can only be used with multisets')
                 return Value(left.value.intersection(right.value), DataType.MULTISET)
             case TokenType.PLUS | TokenType.PLUS_EQUAL:
-                if left.type == DataType.MULTISET and right.type == DataType.MULTISET:
+                if DataType.MULTISET in left.type and DataType.MULTISET in right.type:
                     return Value(left.value + right.value, DataType.MULTISET)
                 valid = DataType.INT | DataType.SYMBOL
-                if (left.type == DataType.SYMBOL or right.type == DataType.SYMBOL) and (
-                        left.type in valid and right.type in valid):
+                if (DataType.SYMBOL in left.type or DataType.SYMBOL in right.type) and ((left.type & valid) and (right.type & valid)):
                     return Value(str(left.value) + str(right.value), DataType.SYMBOL)
-                if left.type == DataType.INT and right.type == DataType.INT:
+                if DataType.INT in left.type and DataType.INT in right.type:
                     return Value(left.value + right.value, DataType.INT)
                 self.type_error(f'The + operator is not defined for {left.type} and {right.type}')
             case TokenType.MINUS | TokenType.MINUS_EQUAL:
-                if left.type == DataType.MULTISET and right.type == DataType.MULTISET:
+                if DataType.MULTISET in left.type and DataType.MULTISET in right.type:
                     return Value(left.value - right.value, DataType.MULTISET)
-                if left.type == DataType.INT and right.type == DataType.INT:
+                if DataType.INT in left.type and DataType.INT in right.type:
                     return Value(left.value - right.value, DataType.INT)
                 self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
             case TokenType.DIV | TokenType.DIV_EQUAL:
-                if left.type == DataType.INT and right.type == DataType.INT:
+                if DataType.INT in left.type and DataType.INT in right.type:
                     return Value(left.value // right.value, DataType.INT)
                 self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
             case TokenType.MOD | TokenType.MOD_EQUAL:
-                if left.type == DataType.INT and right.type == DataType.INT:
+                if DataType.INT in left.type and DataType.INT in right.type:
                     return Value(left.value % right.value, DataType.INT)
                 self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
             case TokenType.MULT | TokenType.MULT_EQUAL:
-                if left.type == DataType.MULTISET and right.type == DataType.INT:
+                if DataType.MULTISET in left.type and DataType.INT in right.type:
                     return Value(left.value * right.value, DataType.MULTISET)
-                if left.type == DataType.SYMBOL and right.type == DataType.INT:
+                if DataType.SYMBOL in left.type and DataType.INT in right.type:
                     return Value(left.value * right.value, DataType.SYMBOL)
-                if left.type == DataType.INT and right.type == DataType.INT:
+                if DataType.INT in left.type and DataType.INT in right.type:
                     return Value(left.value * right.value, DataType.INT)
                 self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
         self.unexpected_error('Unknown operand ' + op)
@@ -101,7 +101,7 @@ class Interpreter(Visitor[Data]):
 
     def visitGroupingExpr(self, expr: Grouping) -> Data:
         value = expr.expression.accept(self)
-        if value.type == DataType.REGEX:
+        if DataType.REGEX in value.type:
             return Value(['('] + value.value + [')'], DataType.REGEX)
         return expr.expression.accept(self)
 
@@ -116,31 +116,31 @@ class Interpreter(Visitor[Data]):
         value = expr.right.accept(self)
 
         if expr.operator.token_type == TokenType.MINUS:
-            if value.type != DataType.INT:
+            if DataType.INT not in value.type:
                 self.type_error('Can not apply minus operator to a non int value')
             return Value(-value.value, DataType.INT)
 
         if expr.operator.token_type == TokenType.OPEN_MEMBRANE:
-            if value.type != DataType.INT:
+            if DataType.INT not in value.type:
                 self.type_error('Can not get a membrane with a non int index')
             return Membrane(self.mm, value.value)
 
         if expr.operator.token_type == TokenType.OPEN_CHANNEL:
-            if value.type != DataType.INT:
+            if DataType.INT not in value.type:
                 self.type_error('Can not get a channel with a non int index')
             return Value(value.value, DataType.CHANNEL)
 
         if expr.operator.token_type == TokenType.MULT:
-            if value.type == DataType.SYMBOL:
+            if DataType.SYMBOL in value.type:
                 return Value([value.value, '*'], DataType.REGEX)
-            if value.type == DataType.REGEX:
+            if DataType.REGEX in value.type:
                 return Value(value.value + ['*'], DataType.REGEX)
             self.type_error('Can not use the star regex operator with non regex or symbol expression')
 
         if expr.operator.token_type == TokenType.PLUS:
-            if value.type == DataType.SYMBOL:
+            if DataType.SYMBOL in value.type:
                 return Value([value.value, '+'], DataType.REGEX)
-            if value.type == DataType.REGEX:
+            if DataType.REGEX in value.type:
                 return Value(value.value + ['+'], DataType.REGEX)
             self.type_error('Can not use the plus regex operator with non regex or symbol expression')
 
@@ -153,7 +153,7 @@ class Interpreter(Visitor[Data]):
         m = Multiset()
         for v in expr.content:
             val = v.accept(self)
-            if val.type != DataType.SYMBOL:
+            if DataType.SYMBOL not in val.type:
                 self.type_error(f'Expected multiset items to be symbol but {val.type} found')
             m.add(val.value)
         return Value(m, DataType.MULTISET)
@@ -162,7 +162,6 @@ class Interpreter(Visitor[Data]):
         #from tests.testParser import Printer
         for instruction in expr.instructions:
             #print("=============================================")
-            #print(instruction.accept(Printer()))
             instruction.accept(self)
             #print("")
             #self.print_state()
@@ -170,7 +169,7 @@ class Interpreter(Visitor[Data]):
 
     def visitCallExpr(self, expr: Call) -> Data:
         f = expr.identifier.accept(self)
-        if f.type != DataType.FUNCTION:
+        if DataType.FUNCTION not in f.type:
             self.type_error(f'Expected function but {f.type} found')
         parameters = list(map(lambda x: x.accept(self), expr.params))
         return f.value.call(*parameters)
@@ -179,28 +178,29 @@ class Interpreter(Visitor[Data]):
         left = expr.left.accept(self)
         right = expr.right.accept(self)
         channel = expr.channel.accept(self)
-        if not isinstance(left, Membrane):
+        if DataType.MEMBRANE not in left.type:
             self.type_error(f'Expected membrane as left production part but {left.type} found')
-        if isinstance(right, Variable) and right.type == DataType.MEMBRANE:
-            right = right.value
-        if not isinstance(right, Membrane):
+        if DataType.MEMBRANE not in right.type:
             self.type_error(f'Expected membrane as right production part but {right.type} found')
+
         if channel.type != DataType.CHANNEL:
             self.type_error(f'Expected channel as production label but {channel.type} found')
 
         if right.reference == left.reference:
             self.interpreter_error('CircularSinapsisError', 'Circular sinapsis can not exist')
 
+        if left.reference == 'out':
+            self.interpreter_error('EnvValueError', f'Sinapsis origin can not bet the output environment')
+
         self.model.add_channel(channel.value, left.reference, right.reference)
-        #print(f'New sinapsis added to channel {channel.value} from membrane {left.reference} to membrane {right.reference}')
         return none
 
     def visitRegexExpr(self, expr: Regex) -> Data:
         regex = []
         for val in map(lambda x: x.accept(self), expr.content):
-            if val.type == DataType.SYMBOL:
+            if DataType.SYMBOL in val.type:
                 regex.append(val.value)
-            elif val.type == DataType.REGEX:
+            elif DataType.REGEX in val.type:
                 regex += val.value
             else:
                 self.type_error(f'Expected regex or symbol but {val.type} found')

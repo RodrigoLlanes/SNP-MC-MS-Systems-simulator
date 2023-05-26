@@ -95,7 +95,10 @@ class Parser:
 
     def sinapsis(self) -> Expr:
         channel = self.channel()
-        left = self.membrane()
+        if self.check(TokenType.OPEN_MEMBRANE):
+            left = self.membrane()
+        else:
+            left = self.identifier()
         self.consume(TokenType.THEN, 'Then expression ("-->") expected')
         if self.check(TokenType.OPEN_MEMBRANE):
             right = self.membrane()

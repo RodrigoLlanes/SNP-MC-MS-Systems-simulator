@@ -10,11 +10,3 @@ def input_membrane(interpreter: 'Interpreter'):
         return none
     return wrapper
 
-
-def output_membrane(interpreter: 'Interpreter'):
-    def wrapper(membrane: Data) -> Data:
-        if not isinstance(membrane, Membrane):
-            error('BuiltinFunction', 'ArgumentTypeMismatch', 'The argument of the output function should be a Membrane.')
-        interpreter.model.set_output(membrane.reference)
-        return none
-    return wrapper

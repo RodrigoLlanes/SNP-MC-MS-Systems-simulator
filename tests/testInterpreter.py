@@ -30,7 +30,7 @@ class TestInterpreter(unittest.TestCase):
             [0] ('a' 'a' 'b'*)+ / {'a', 'b'} --> {'a', 'a'} <0>, {'b'} <1>
             
             [1] 'symbol'+'a'+ / {'symbol', 'a'} --> {'a'} <3>
-            <3> [1] --> [1]
+            <3> [1] --> [0]
             
             [1] = {'symbol', 'symbol', 'a'}
         """
