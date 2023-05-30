@@ -13,7 +13,8 @@ class Scanner:
         self.tokens: List[Token] = []
 
         self.keywords: Dict[str, TokenType] = {
-            #'def': TokenType.DEF,
+            'lambda': TokenType.LAMBDA,
+            'λ': TokenType.LAMBDA,
             #'in': TokenType.IN,
             #'out': TokenType.OUT
         }

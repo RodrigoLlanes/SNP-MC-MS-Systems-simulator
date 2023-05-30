@@ -12,6 +12,14 @@ class Multiset(MutableSet[T]):
         self.map: Dict[T, int] = defaultdict(int)
         self.extend(iterable)
 
+    def __eq__(self, other):
+        if set(self.map.keys()) != set(other.map.keys()):
+            return False
+        for k, v in self.map.items():
+            if other.map[k] != v:
+                return False
+        return True
+
     def __repr__(self) -> str:
         return str(self)
 
@@ -96,7 +104,7 @@ class Multiset(MutableSet[T]):
     def set(self) -> Set[T]:
         return set(self.map.keys())
 
-    def count(self, symbol: T):
+    def count(self, symbol: T) -> int:
         if symbol not in self.map:
             return 0
         return self.map[symbol]

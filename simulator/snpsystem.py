@@ -17,30 +17,50 @@ U = TypeVar('U')
 
 
 class Rule:
-    def __init__(self, regex: typing.Union[str, List[str]], removed: Multiset[str], channels: Dict[U, Multiset[str]]):
-        self.regex_str: str = regex
-        self.regex: DFA = DFA.from_RegEx(regex)
+    def __init__(self, regex: Optional[typing.Union[str, List[str]]], removed: Multiset[str], channels: Dict[U, Multiset[str]]):
+        self.regex_str: Optional[str] = regex
+        self.regex: DFA = DFA.from_RegEx(regex) if regex else None
         self.removed: Multiset[str] = removed
         self.channels: Dict[str, Multiset[str]] = channels
+        self.forgetting: bool = len(channels) == 0
 
     def __str__(self):
-        return f'{self.regex_str} / {self.removed} --> ' + \
-               ', '.join(f'{content} <{channel}>' for channel, content in self.channels.items())
+        synapses = ', '.join(f'{content} <{channel}>' for channel, content in self.channels.items())
+        if self.forgetting:
+            synapses = 'λ'
+
+        if self.regex:
+            return f'{self.regex_str} / {self.removed} --> {synapses}'
+        else:
+            return f'{self.removed} --> {synapses}'
 
     def __repr__(self):
         return str(self)
 
     def valid(self, multiset: Multiset[str]) -> bool:
-        return self.regex.accepts_multiset(multiset)
+        if self.forgetting:
+            return True
+        elif self.regex is None:
+            return self.removed == multiset
+        else:
+            return self.regex.accepts_multiset(multiset)
 
     def dot(self):
         regex = self.regex_str
-        if isinstance(regex, list):
-            regex = ''.join(s if len(s) == 1 else f"'{s}'" for s in regex)
-        regex = re.sub(r'\+', '<SUP>+</SUP>', regex)
-        regex = re.sub(r'\*', '<SUP>*</SUP>', regex)
-        return f'{regex} / {self.removed.dot()} → ' + \
-               ', '.join(f'{content.dot()} ({channel})' for channel, content in self.channels.items())
+        if regex is not None:
+            if isinstance(regex, list):
+                regex = ''.join(s if len(s) == 1 else f"'{s}'" for s in regex)
+            regex = re.sub(r'\+', '<SUP>+</SUP>', regex)
+            regex = re.sub(r'\*', '<SUP>*</SUP>', regex)
+
+        synapses = ', '.join(f'{content.dot()} ({channel})' for channel, content in self.channels.items())
+        if self.forgetting:
+            synapses = 'λ'
+
+        if self.regex:
+            return f'{regex} / {self.removed.dot()} → {synapses}'
+        else:
+            return f'{self.removed.dot()} → {synapses}'
 
 
 def register_membrane(*indexes):

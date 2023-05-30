@@ -190,7 +190,7 @@ class Interpreter(Visitor[Data]):
             self.interpreter_error('CircularSinapsisError', 'Circular sinapsis can not exist')
 
         if left.reference == 'out':
-            self.interpreter_error('EnvValueError', f'Sinapsis origin can not bet the output environment')
+            self.interpreter_error('EnvValueError', f'Sinapsis origin can not be the output environment')
 
         self.model.add_channel(channel.value, left.reference, right.reference)
         return none
@@ -208,12 +208,12 @@ class Interpreter(Visitor[Data]):
 
     def visitProductionExpr(self, expr: Production) -> Data:
         membrane = expr.membrane.accept(self)
-        regex = expr.regex.accept(self)
+        regex = expr.regex.accept(self).value if expr.regex else None
         consumed = expr.consumed.accept(self)
         channels = [(send.accept(self), channel.accept(self)) for send, channel in expr.channels]
 
         #print(f'New production added to membrane {membrane.reference} if match {regex.value} consume {consumed.value}')
         #for send, channel in channels:
         #    print(f'    Send {send.value} to channel {channel.value}')
-        self.model.add_rule(membrane.reference, regex.value, consumed.value, {channel.value: send.value for send, channel in channels})
+        self.model.add_rule(membrane.reference, regex, consumed.value, {channel.value: send.value for send, channel in channels})
         return none

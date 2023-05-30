@@ -123,7 +123,7 @@ class Parser:
             expr = Unary(self.peek(-1), expr)  # Habrá que ajustarlo en el interprete
         return expr
 
-    def regex(self) -> Expr:
+    def regex(self) -> Regex:
         expressions = []
         while expr := self.regex_expr():
             expressions.append(expr)
@@ -135,12 +135,19 @@ class Parser:
             return None
         membrane = self.membrane()
         regex = self.regex()
-        if not self.match(TokenType.DIV):
+        if len(regex.content) == 0:
+            regex = None
+        if not self.match(TokenType.DIV) and (regex or self.check(TokenType.EQUAL)):
             self.current = checkpoint
             return None
         consumed = self.expression()
         if not self.match(TokenType.THEN):
             self.error(self.peek(), 'Then expression ("-->") expected')
+
+        if self.match(TokenType.LAMBDA):
+            if regex is not None:
+                self.error(self.peek(), 'Forgetting rules can not have regular expression')
+            return Production(membrane, regex, consumed, [])
 
         send = self.expression()
         if not self.check(TokenType.OPEN_CHANNEL):

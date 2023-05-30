@@ -5,8 +5,7 @@ class TokenType(Flag):
     #DEF = auto()    # FUTURE
     #RETURN = auto()    # FUTURE
 
-    IN = auto()
-    OUT = auto()
+    LAMBDA = auto()
 
     IDENTIFIER = auto()
     SYMBOL = auto()
