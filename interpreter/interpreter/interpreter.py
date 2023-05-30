@@ -211,9 +211,10 @@ class Interpreter(Visitor[Data]):
         regex = expr.regex.accept(self).value if expr.regex else None
         consumed = expr.consumed.accept(self)
         channels = [(send.accept(self), channel.accept(self)) for send, channel in expr.channels]
+        block = expr.block.accept(self).value
 
         #print(f'New production added to membrane {membrane.reference} if match {regex.value} consume {consumed.value}')
         #for send, channel in channels:
         #    print(f'    Send {send.value} to channel {channel.value}')
-        self.model.add_rule(membrane.reference, regex, consumed.value, {channel.value: send.value for send, channel in channels})
+        self.model.add_rule(membrane.reference, regex, consumed.value, {channel.value: send.value for send, channel in channels}, block)
         return none

@@ -6,6 +6,7 @@ class TokenType(Flag):
     #RETURN = auto()    # FUTURE
 
     LAMBDA = auto()
+    COLON = auto()
 
     IDENTIFIER = auto()
     SYMBOL = auto()

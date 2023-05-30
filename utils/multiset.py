@@ -79,8 +79,9 @@ class Multiset(MutableSet[T]):
         self.map[value] += 1
 
     def discard(self, value: T) -> None:
-        if self.map[value] > 0:
-            self.map[value] -= 1
+        self.map[value] -= 1
+        if self.map[value] <= 0:
+            del self.map[value]
 
     def extend(self, other: Iterable[T]) -> None:
         for item in other:

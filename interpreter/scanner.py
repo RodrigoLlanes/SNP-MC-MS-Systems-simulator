@@ -96,6 +96,8 @@ class Scanner:
                 self.add_token(TokenType.CLOSE_CHANNEL)
             case ',':
                 self.add_token(TokenType.COMMA)
+            case ':':
+                self.add_token(TokenType.COLON)
             case '&':
                 if self.match('='):
                     self.add_token(TokenType.INTERSECTION_EQUAL)

@@ -17,22 +17,24 @@ U = TypeVar('U')
 
 
 class Rule:
-    def __init__(self, regex: Optional[typing.Union[str, List[str]]], removed: Multiset[str], channels: Dict[U, Multiset[str]]):
+    def __init__(self, regex: Optional[typing.Union[str, List[str]]], removed: Multiset[str], channels: Dict[U, Multiset[str]], block: int):
         self.regex_str: Optional[str] = regex
         self.regex: DFA = DFA.from_RegEx(regex) if regex else None
         self.removed: Multiset[str] = removed
         self.channels: Dict[str, Multiset[str]] = channels
         self.forgetting: bool = len(channels) == 0
+        self.block: int = block
 
     def __str__(self):
         synapses = ', '.join(f'{content} <{channel}>' for channel, content in self.channels.items())
         if self.forgetting:
             synapses = 'λ'
+        block = '' if self.block == 0 else f' ; {self.block}'
 
         if self.regex:
-            return f'{self.regex_str} / {self.removed} --> {synapses}'
+            return f'{self.regex_str} / {self.removed} --> {synapses}{block}'
         else:
-            return f'{self.removed} --> {synapses}'
+            return f'{self.removed} --> {synapses}{block}'
 
     def __repr__(self):
         return str(self)
@@ -56,11 +58,12 @@ class Rule:
         synapses = ', '.join(f'{content.dot()} ({channel})' for channel, content in self.channels.items())
         if self.forgetting:
             synapses = 'λ'
+        block = '' if self.block == 0 else f' ; {self.block}'
 
         if self.regex:
-            return f'{regex} / {self.removed.dot()} → {synapses}'
+            return f'{regex} / {self.removed.dot()} → {synapses}{block}'
         else:
-            return f'{self.removed.dot()} → {synapses}'
+            return f'{self.removed.dot()} → {synapses}{block}'
 
 
 def register_membrane(*indexes):
@@ -89,6 +92,7 @@ class SNPSystem(Generic[T, U]):
         self._rules: Dict[int, List[Rule]] = defaultdict(list)
 
         self._state: Dict[T, Multiset[chr]] = {}
+        self._delay: Dict[T, int] = {}
         self._next_state: Dict[T, Multiset[chr]] = {}
 
     def render(self, path, current_state: bool = False, name: str = 'SNP-System', comment: str = ''):
@@ -122,8 +126,8 @@ class SNPSystem(Generic[T, U]):
         self._channels[channel][begin].add(end)
 
     @register_membrane(0)
-    def add_rule(self, neuron: T, regex: str, removed: Multiset[chr], channels: Dict[U, Multiset[chr]]) -> None:
-        self._rules[neuron].append(Rule(regex, removed, channels))
+    def add_rule(self, neuron: T, regex: str, removed: Multiset[chr], channels: Dict[U, Multiset[chr]], block: int) -> None:
+        self._rules[neuron].append(Rule(regex, removed, channels, block))
 
     def _update_state(self):
         self._state = deepcopy(self._next_state)
@@ -143,15 +147,29 @@ class SNPSystem(Generic[T, U]):
         return True
 
     def _run_neuron(self, neuron: T) -> bool:
+        if self._delay[neuron] > 0:
+            self._delay[neuron] -= 1
+            return True
+
         modified = False
         valid_rules = self._valid_rules(neuron)
+        delay = 0
         while valid_rules := self._aplicable_rules(neuron, valid_rules):
-            modified |= self._run_rule(neuron, random.choice(valid_rules))
+            rules = [rule for rule in valid_rules if not rule.forgetting]
+            if len(rules) == 0:
+                rules = valid_rules
+
+            rule = random.choice(rules)
+            delay = max(delay, rule.block)
+            while len(rule.removed - self._state[neuron]) == 0:
+                modified |= self._run_rule(neuron, random.choice(rules))
+        self._delay[neuron] = delay
         return modified
 
     def run(self, input_data: Multiset[str], render_steps: bool = False, render_name: str = 'SNP-System',
             render_path: str = '../tmp') -> Multiset[str]:
         self._next_state = deepcopy(self._ms)
+        self._delay = {k: 0 for k in self._ms.keys()}
         if self._input is not None:
             self._next_state[self._input].extend(input_data)
         self._update_state()

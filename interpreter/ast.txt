@@ -9,4 +9,4 @@ Call       : Identifier identifier, List[Expr] params
 Function   : Token identifier, List[Token] parameters, List[Expr] instructions
 Sinapsis   : Expr left, Expr channel, Expr right
 Regex      : List[Expr] content
-Production : Expr membrane, Expr regex, Expr consumed, List[Tuple[Expr, Expr]] channels
+Production : Expr membrane, Expr regex, Expr consumed, List[Tuple[Expr, Expr]] channels, Expr block

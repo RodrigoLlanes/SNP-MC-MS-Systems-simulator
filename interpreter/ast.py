@@ -150,11 +150,12 @@ class Regex(Expr):
 
 
 class Production(Expr):
-    def __init__(self, membrane: Expr, regex: Expr, consumed: Expr, channels: List[Tuple[Expr, Expr]]) -> None:
+    def __init__(self, membrane: Expr, regex: Expr, consumed: Expr, channels: List[Tuple[Expr, Expr]], block: Expr) -> None:
         self.membrane: Expr = membrane
         self.regex: Expr = regex
         self.consumed: Expr = consumed
         self.channels: List[Tuple[Expr, Expr]] = channels
+        self.block: Expr = block
 
     def accept(self, visitor: Visitor[T]) -> T:
         return visitor.visitProductionExpr(self)

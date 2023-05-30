@@ -147,7 +147,7 @@ class Parser:
         if self.match(TokenType.LAMBDA):
             if regex is not None:
                 self.error(self.peek(), 'Forgetting rules can not have regular expression')
-            return Production(membrane, regex, consumed, [])
+            return Production(membrane, regex, consumed, [], Literal(0))
 
         send = self.expression()
         if not self.check(TokenType.OPEN_CHANNEL):
@@ -158,7 +158,11 @@ class Parser:
             if not self.check(TokenType.OPEN_CHANNEL):
                 self.error(self.peek(), 'Channel expected')
             tuples.append((send, self.channel()))
-        return Production(membrane, regex, consumed, tuples)
+
+        block = Literal(0)
+        if self.match(TokenType.COLON):
+            block = self.expression()
+        return Production(membrane, regex, consumed, tuples, block)
 
     def expression(self) -> Expr:
         return self.assignment()
