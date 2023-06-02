@@ -126,7 +126,7 @@ class SNPSystem(Generic[T, U]):
         self._channels[channel][begin].add(end)
 
     @register_membrane(0)
-    def add_rule(self, neuron: T, regex: str, removed: Multiset[chr], channels: Dict[U, Multiset[chr]], block: int) -> None:
+    def add_rule(self, neuron: T, regex: str, removed: Multiset[chr], channels: Dict[U, Multiset[chr]], block: int = 0) -> None:
         self._rules[neuron].append(Rule(regex, removed, channels, block))
 
     def _update_state(self):
@@ -162,7 +162,7 @@ class SNPSystem(Generic[T, U]):
             rule = random.choice(rules)
             delay = max(delay, rule.block)
             while len(rule.removed - self._state[neuron]) == 0:
-                modified |= self._run_rule(neuron, random.choice(rules))
+                modified |= self._run_rule(neuron, rule)
         self._delay[neuron] = delay
         return modified
 
