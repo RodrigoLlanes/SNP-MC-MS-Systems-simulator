@@ -71,11 +71,11 @@ class Interpreter(Visitor[Data]):
             case TokenType.DIV | TokenType.DIV_EQUAL:
                 if DataType.INT in left.type and DataType.INT in right.type:
                     return Value(left.value // right.value, DataType.INT)
-                self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
+                self.type_error(f'The / operator is not defined for {left.type} and {right.type}')
             case TokenType.MOD | TokenType.MOD_EQUAL:
                 if DataType.INT in left.type and DataType.INT in right.type:
                     return Value(left.value % right.value, DataType.INT)
-                self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
+                self.type_error(f'The % operator is not defined for {left.type} and {right.type}')
             case TokenType.MULT | TokenType.MULT_EQUAL:
                 if DataType.MULTISET in left.type and DataType.INT in right.type:
                     return Value(left.value * right.value, DataType.MULTISET)
@@ -83,7 +83,7 @@ class Interpreter(Visitor[Data]):
                     return Value(left.value * right.value, DataType.SYMBOL)
                 if DataType.INT in left.type and DataType.INT in right.type:
                     return Value(left.value * right.value, DataType.INT)
-                self.type_error(f'The - operator is not defined for {left.type} and {right.type}')
+                self.type_error(f'The * operator is not defined for {left.type} and {right.type}')
         self.unexpected_error('Unknown operand ' + op)
 
     def visitBinaryExpr(self, expr: Binary) -> Data:

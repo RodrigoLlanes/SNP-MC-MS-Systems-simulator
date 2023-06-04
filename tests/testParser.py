@@ -161,15 +161,8 @@ class TestParser(unittest.TestCase):
         Test
         """
         src = """
-            symb = 'a' + 1
-            [0] = {symb} * 100
-            
-            s1 = {'a', 'b'} * (3*5/2)
-            s2 = {'a'} & s1
-            s3 = {'a'} | s2
-            
-            <1+2> [2+3] --> [0]
-            [0] ('a' 'a' 'b'*)+ / {'a', 'b'} --> {'a', 'a'} <0>, {'b'} <1>
+            [1 + 2] = {'a'}
+            [1 + 2] + {'a'}
         """
         tokens = Scanner(src).scan()
         parsed = Parser(tokens).parse()
