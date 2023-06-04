@@ -181,8 +181,6 @@ class Parser:
         if self.check(TokenType.IDENTIFIER | TokenType.OPEN_MEMBRANE):
             identifier = self.identifier() if self.check(TokenType.IDENTIFIER) else self.membrane()
             if self.check(TokenType.ASSIGNMENT):
-                print("ASSIGN")
-                print(*[f'{t.lexeme}({t.token_type})' for t in self.tokens[self.current:]])
                 op = self.advance()
                 return Binary(identifier, op, self.assignment())
         self.current = checkpoint
@@ -232,14 +230,12 @@ class Parser:
             while self.match(TokenType.COMMA):
                 struct.append(self.expression())
             self.consume(TokenType.CLOSE_SET, 'Expected closing set.')
-            print("STRUCT", struct)
             return Struct(struct)
 
 
         if self.check(TokenType.IDENTIFIER):
             return self.identifier()
         if self.check(TokenType.OPEN_MEMBRANE):
-            print("Membrane")
             return self.membrane()
 
         if self.match(TokenType.OPEN_PAREN):
@@ -247,6 +243,4 @@ class Parser:
             self.consume(TokenType.CLOSE_PAREN, 'Expected closing parenthesis.')
             return Grouping(expr)
 
-        print("Before error: ")
-        print(*[t.lexeme for t in self.tokens[self.current:]])
         self.error(self.peek(), 'Expected expression.')
