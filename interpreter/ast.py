@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Generic, TypeVar
+from typing import Generic, TypeVar, Tuple
 import abc
 
 from .token import Token
-from typing import List, Tuple
+from typing import List
 
 
 T = TypeVar('T')
@@ -122,9 +122,9 @@ class Call(Expr):
 
 
 class Function(Expr):
-    def __init__(self, identifier: Token, parameters: List[Token], instructions: List[Expr]) -> None:
+    def __init__(self, identifier: Token, parameters: List[Expr], instructions: List[Expr]) -> None:
         self.identifier: Token = identifier
-        self.parameters: List[Token] = parameters
+        self.parameters: List[Expr] = parameters
         self.instructions: List[Expr] = instructions
 
     def accept(self, visitor: Visitor[T]) -> T:

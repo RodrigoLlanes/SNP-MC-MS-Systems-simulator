@@ -1,4 +1,5 @@
 import unittest
+from typing import Dict
 
 from interpreter.interpreter import Interpreter
 from interpreter.scanner import Scanner
@@ -6,6 +7,9 @@ from interpreter.parser import Parser
 
 
 class TestInterpreter(unittest.TestCase):
+    def _test_output(self, src: str, output: Dict[str, int]):
+        self.assertDictEqual()
+
     def test(self):
         """
         Test

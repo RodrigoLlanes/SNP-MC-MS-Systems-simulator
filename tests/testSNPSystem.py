@@ -31,6 +31,6 @@ class TestSNPSystem(unittest.TestCase):
         snp.add_rule(5, '1*a', Multiset(['a']), {3: Multiset(['a'])})
         snp.add_rule(5, '1*a', Multiset(['a']), {4: Multiset(['a'])})
 
-        result = snp.run(['a'], render_steps=True)
+        result = snp.run(['a'], render_steps=False)
 
         print(result)

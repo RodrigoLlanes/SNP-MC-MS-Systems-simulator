@@ -5,7 +5,7 @@ import re
 import typing
 from collections import defaultdict
 from copy import deepcopy
-from typing import Dict, List, TypeVar, Generic, Set, Optional
+from typing import Dict, List, TypeVar, Generic, Set, Optional, Tuple
 from dataclasses import dataclass
 from utils.graphrenderer import GraphRenderer
 
@@ -92,7 +92,7 @@ class SNPSystem(Generic[T, U]):
         self._rules: Dict[int, List[Rule]] = defaultdict(list)
 
         self._state: Dict[T, Multiset[chr]] = {}
-        self._delay: Dict[T, int] = {}
+        self._delay: Dict[T, List[int, Optional[Rule]]] = {}
         self._next_state: Dict[T, Multiset[chr]] = {}
 
     def render(self, path, current_state: bool = False, name: str = 'SNP-System', comment: str = ''):
@@ -147,11 +147,15 @@ class SNPSystem(Generic[T, U]):
         return True
 
     def _run_neuron(self, neuron: T) -> bool:
-        if self._delay[neuron] > 0:
-            self._delay[neuron] -= 1
-            return True
-
         modified = False
+
+        if self._delay[neuron][0] > 0:
+            self._delay[neuron][0] -= 1
+            return True
+        elif self._delay[neuron][0] == 0:
+            self._delay[neuron][0] -= 1
+            modified |= self._run_rule(neuron, self._delay[neuron][1])
+
         valid_rules = self._valid_rules(neuron)
         delay = 0
         while valid_rules := self._aplicable_rules(neuron, valid_rules):
@@ -160,16 +164,18 @@ class SNPSystem(Generic[T, U]):
                 rules = valid_rules
 
             rule = random.choice(rules)
-            delay = max(delay, rule.block)
+            if rule.block > 0:
+                self._delay[neuron] = [delay, rule]
+                return True
+
             while len(rule.removed - self._state[neuron]) == 0:
                 modified |= self._run_rule(neuron, rule)
-        self._delay[neuron] = delay
         return modified
 
     def run(self, input_data: Multiset[str], render_steps: bool = False, render_name: str = 'SNP-System',
             render_path: str = '../tmp') -> Multiset[str]:
         self._next_state = deepcopy(self._ms)
-        self._delay = {k: 0 for k in self._ms.keys()}
+        self._delay = {k: [-1, None] for k in self._ms.keys()}
         if self._input is not None:
             self._next_state[self._input].extend(input_data)
         self._update_state()
