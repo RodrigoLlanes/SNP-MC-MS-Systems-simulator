@@ -95,6 +95,8 @@ class SNPSystem(Generic[T, U]):
         self._delay: Dict[T, List[int, Optional[Rule]]] = {}
         self._next_state: Dict[T, Multiset[chr]] = {}
 
+        self._history: List[Dict[str, Multiset]] = []
+
     def render(self, path, current_state: bool = False, name: str = 'SNP-System', comment: str = ''):
         gr = GraphRenderer(name, comment=comment)
 
@@ -133,10 +135,7 @@ class SNPSystem(Generic[T, U]):
         self._state = deepcopy(self._next_state)
 
     def _valid_rules(self, neuron: T) -> List[Rule]:
-        return [rule for rule in self._rules[neuron] if rule.valid(self._state[neuron])]
-
-    def _aplicable_rules(self, neuron: T, rules: List[Rule]) -> List[Rule]:
-        return [rule for rule in rules if len(rule.removed - self._state[neuron]) == 0]
+        return [rule for rule in self._rules[neuron] if len(rule.removed - self._state[neuron]) == 0 and rule.valid(self._state[neuron])]
 
     def _run_rule(self, neuron: T, rule: Rule) -> bool:
         self._state[neuron] -= rule.removed
@@ -144,6 +143,8 @@ class SNPSystem(Generic[T, U]):
         for channel, sent in rule.channels.items():
             for target in self._channels[channel][neuron]:
                 self._next_state[target].extend(sent)
+                if target == self._output:
+                    self._history[-1][channel].extend(sent)
         return True
 
     def _run_neuron(self, neuron: T) -> bool:
@@ -156,9 +157,8 @@ class SNPSystem(Generic[T, U]):
             self._delay[neuron][0] -= 1
             modified |= self._run_rule(neuron, self._delay[neuron][1])
 
-        valid_rules = self._valid_rules(neuron)
         delay = 0
-        while valid_rules := self._aplicable_rules(neuron, valid_rules):
+        while valid_rules := self._valid_rules(neuron):
             rules = [rule for rule in valid_rules if not rule.forgetting]
             if len(rules) == 0:
                 rules = valid_rules
@@ -168,12 +168,14 @@ class SNPSystem(Generic[T, U]):
                 self._delay[neuron] = [delay, rule]
                 return True
 
-            while len(rule.removed - self._state[neuron]) == 0:
+            while len(rule.removed - self._state[neuron]) == 0 and rule.valid(self._state[neuron]):
                 modified |= self._run_rule(neuron, rule)
         return modified
 
     def run(self, input_data: Multiset[str], render_steps: bool = False, render_name: str = 'SNP-System',
-            render_path: str = '../tmp') -> Multiset[str]:
+            render_path: str = '../tmp', mode: str = 'halt', max_steps: Optional[int] = None) -> \
+            typing.Union[Multiset[str], Dict[str, Multiset[str]], List[Multiset[str]], List[Dict[str, Multiset[str]]]]:
+        self._history = []
         self._next_state = deepcopy(self._ms)
         self._delay = {k: [-1, None] for k in self._ms.keys()}
         if self._input is not None:
@@ -183,6 +185,7 @@ class SNPSystem(Generic[T, U]):
         if render_steps:
             self.render(render_path, True, f'{render_name}.0')
         while True:
+            self._history.append(defaultdict(Multiset))
             step += 1
             modified = False
             for neuron in self._ms.keys():
@@ -192,8 +195,26 @@ class SNPSystem(Generic[T, U]):
             self._update_state()
             if render_steps:
                 self.render(render_path, True, f'{render_name}.{step}')
+            if max_steps and step == max_steps:
+                break
         self._update_state()
 
         if self._output is not None:
-            return self._state[self._output]
+            match mode:
+                case 'halt':
+                    return self._state[self._output]
+                case 'halt-mc':
+                    res = defaultdict(Multiset)
+                    for item in self._history:
+                        for k, v in item.items():
+                            res[k].extend(v)
+                    return res
+                case 'time':
+                    res = [Multiset() for _ in range(len(self._history))]
+                    for i, item in enumerate(self._history):
+                        for k, v in item.items():
+                            res[i].extend(v)
+                    return res
+                case 'time-mc':
+                    return self._history
         return Multiset()

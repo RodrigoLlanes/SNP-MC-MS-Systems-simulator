@@ -1,67 +1,85 @@
 import unittest
-from typing import Dict
+from typing import Dict, List, Union, Optional
 
 from interpreter.interpreter import Interpreter
 from interpreter.scanner import Scanner
 from interpreter.parser import Parser
+from simulator.snpsystem import SNPSystem
+from utils import Multiset
 
 
 class TestInterpreter(unittest.TestCase):
-    def _test_output(self, src: str, output: Dict[str, int]):
-        self.assertDictEqual()
-
-    def test(self):
+    def _test_output(self, src: str, mode: str, output: Union[Multiset[str], Dict[str, Multiset[str]],
+                                                              List[Multiset[str]], List[Dict[str, Multiset[str]]]],
+                     input_data: Optional[Multiset[str]] = None):
         """
-        Test
-        """
-        src = """
-            symb = 'a' + 1
-            [0] = {symb} * 100
-
-            s1 = {'a1', 'b'} * (3*5/2)
-            aux = s2 = {'a1'} & s1
-            s3 = {symb} | s2
-            s2 = s3 + s2
-            
-            [0] += [1] + s2
-            
-            input([1])
-            
-            # Se cambia el tipo de symb
-            symb = 12
-            
-            <1+2> [symb+3] --> [0]
-            [0] ('a' 'a' 'b'*)+ / {'a', 'b'} --> {'a', 'a'} <0>, {'b'} <1>
-            
-            [1] 'symbol'+'a'+ / {'symbol', 'a'} --> {'a'} <3>
-            <3> [1] --> [0]
-            
-            [1] = {'symbol', 'symbol', 'a'}
-            <3> [1] --> out
-        """
-        src = """
-            input([0])
-            
-            [1] = {'1'} * 3
-            [2] = {'1'} * 2
-            
-            <1> [5] --> [1]
-            <2> [0] --> [2]
-            <2> [5] --> [2]
-            <3> [5] --> [3]
-            <4> [5] --> [4]
-            <5> [2] --> [5]
-            
-            [0] {'a'} --> {'a'} <2>
-            
-            [2] '1'* 'a' / {'1'} --> {'1'} <5>
-            [2] '1'* 'a' / {'a'} --> {'a'} <5>
-            
-            [5] '1'+ / {'1'} --> {'1'} <2>, {'1'} <1>
-            [5] '1'* 'a' / {'a'} --> {'a'} <3> : 3
-            [5] '1'* 'a' / {'a'} --> {'a'} <4> : 2
+        Test if the interpreter generated model returns the expected output
         """
         tokens = Scanner(src).scan()
         parsed = Parser(tokens).parse()
         model = Interpreter(parsed).run()
-        model.run(['a'], True, render_path='../tmp')
+        res = model.run(input_data if input_data else Multiset(), mode=mode)
+        match mode:
+            case 'halt':
+                self.assertEqual(res, output)
+            case 'halt-ch':
+                self.assertDictEqual(res, output)
+            case 'time':
+                self.assertListEqual(res, output)
+            case 'time-ch':
+                self.assertEqual(len(res), len(output))
+                for a, b in zip(res, output):
+                    self.assertDictEqual(a, b)
+
+    def test_interpreter(self):
+        """
+        Test some source codes
+        """
+        src = '''
+        input([0])
+        
+        <1> [0] --> out
+        <2> [0] --> [2]
+        
+        [0] {'a'} --> {'1'} <1>, {'a'} <2>
+        '''
+        self._test_output(src, 'halt', Multiset(['1']), Multiset(['a']))
+
+        src = '''
+        input([0])
+
+        <0> [1] --> [0]
+        <1> [0] --> [1]
+        <2> [1] --> out
+        <2> [0] --> out
+
+        [0] 'a' 'a'+ / {'a'} --> {'a'} <1>
+        [0] {'a'} --> {'1'} <2>
+        
+        [1] 'a' 'a'+ / {'a'} --> {'a'} <0>
+        [1] {'a'} --> {'1'} <2>
+        '''
+        self._test_output(src, 'halt', Multiset(['1']*10), Multiset(['a']*10))
+
+        src = '''
+        input([0])
+
+        [2] = {'1'} * 2
+
+        <1> [5] --> out
+        <2> [0] --> [2]
+        <2> [5] --> [2]
+        <3> [5] --> [3]
+        <4> [5] --> [4]
+        <5> [2] --> [5]
+
+        [0] 'a' / {'a'} --> {'a'} <2>
+
+        [2] '1'* 'a' / {'1'} --> {'1'} <5>
+        [2] {'a'} --> {'a'} <5>
+
+        [5] '1'* 'a' / {'1'} --> {'1'} <2>, {'1'} <1>
+        [5] {'a'} --> {'a'} <3>
+        [5] {'a'} --> {'a'} <4>
+        '''
+        self._test_output(src, 'halt', Multiset(['1'] * 2), Multiset(['a']))
