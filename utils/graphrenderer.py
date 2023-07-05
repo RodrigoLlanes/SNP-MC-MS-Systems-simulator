@@ -23,5 +23,4 @@ class GraphRenderer:
         self.graph.edge(start, end, label=f'({label})' if label else None)
 
     def render(self, path):
-        # print(dot.source)
-        print(self.graph.render(directory=path).replace('\\', '/'))
+        self.graph.render(directory=path).replace('\\', '/')
