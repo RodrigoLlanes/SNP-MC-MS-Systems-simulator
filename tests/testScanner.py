@@ -19,15 +19,13 @@ class TestScanner(unittest.TestCase):
         Test the multiset definition
         """
         self._test_scan("{'1'}",
-                        ['{', "'1'", '}', '*', '3', 'EOF'],
-                        [TokenType.OPEN_SET, TokenType.SYMBOL, TokenType.CLOSE_SET, TokenType.MULT, TokenType.NUMBER,
-                         TokenType.EOF])
+                        ['{', "'1'", '}', 'EOF'],
+                        [TokenType.OPEN_SET, TokenType.SYMBOL, TokenType.CLOSE_SET, TokenType.EOF])
 
         self._test_scan("{'a', 'b', 'b'}",
-                        ['{', "'a'", ',', "'b'", ',', "'b'", '}', '+', '{', "'a'", '}', 'EOF'],
+                        ['{', "'a'", ',', "'b'", ',', "'b'", '}', 'EOF'],
                         [TokenType.OPEN_SET, TokenType.SYMBOL, TokenType.COMMA, TokenType.SYMBOL, TokenType.COMMA,
-                         TokenType.SYMBOL, TokenType.CLOSE_SET, TokenType.PLUS, TokenType.OPEN_SET, TokenType.SYMBOL,
-                         TokenType.CLOSE_SET, TokenType.EOF])
+                         TokenType.SYMBOL, TokenType.CLOSE_SET, TokenType.EOF])
 
     def test_operands(self):
         """
