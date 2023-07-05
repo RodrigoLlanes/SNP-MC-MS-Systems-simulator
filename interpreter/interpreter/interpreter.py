@@ -6,7 +6,6 @@ from interpreter.interpreter.memorymanager import MemoryManager, DataType, Data,
 from interpreter.token import TokenType
 from interpreter.errormanager import error
 from simulator.snpsystem import SNPSystem
-from tests.testParser import Printer
 from utils import Multiset
 
 
